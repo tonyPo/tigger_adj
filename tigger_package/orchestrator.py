@@ -5,24 +5,11 @@ import numpy as np
 import yaml
 import tensorflow as tf
 
-import tigger_package.graphsage.graphsage_controller
-import tigger_package.flownet
-import tigger_package.inductive_controller
-import tigger_package.graph_generator
-import tigger_package.graphsage_unsup
-
-import importlib
-importlib.reload(tigger_package.graphsage.graphsage_controller)
-importlib.reload(tigger_package.flownet)
-importlib.reload(tigger_package.inductive_controller)
-importlib.reload(tigger_package.graph_generator)
-importlib.reload(tigger_package.graphsage_unsup)
-
 from tigger_package.graphsage_unsup import TorchGeoGraphSageUnsup
 from tigger_package.graph_generator import GraphGenerator
 from tigger_package.flownet import FlowNet
 from tigger_package.inductive_controller import InductiveController
-from tigger_package.graphsage.graphsage_controller import GraphSageController
+from tigger_package.variant2 import GraphSynthesizer2
 
 class Orchestrator():
     def __init__(self, config_path):
@@ -31,8 +18,9 @@ class Orchestrator():
         self.config = config_dict
         self.config_path = config_path
         self.flownet = None
-        self.gsc = None
+        self.graphsage = None
         self.inductiveController = None
+        self.graphsynthesizer2 = None
     
     def train_flow(self):
         with tf.device('/CPU:0'):
@@ -64,16 +52,6 @@ class Orchestrator():
             res = self.flownet.lin_grid_search(grid_dict, embed, node)
         return res
     
-    def create_embedding(self):
-        nodes = self._load_nodes()
-        edges =  self._load_edges()
-        self.gsc = GraphSageController(
-            path=self.config_path,
-            config_dict=self.config['graphsage']
-        )
-        train_metrics = self.gsc.get_embedding(nodes, edges)
-        return train_metrics
-    
     def create_graphsage_embedding(self):
         nodes = self._load_nodes()
         edges =  self._load_edges()
@@ -84,19 +62,21 @@ class Orchestrator():
             edges=edges,
         )
         train_metrics = self.graphsage.fit()
-        embed = self.graphsage.get_embedding(nodes, edges)
-        return train_metrics, embed
+        self.graphsage.get_embedding(nodes, edges)
+        return train_metrics
         
         
     def lin_grid_search_graphsage(self, grid_dict):
         nodes = self._load_nodes()
         edges =  self._load_edges()
-        if not self.flownet:
-            self.gsc = GraphSageController(
+        if not self.graphsage:
+            self.graphsage = TorchGeoGraphSageUnsup(
+                config_dict = self.config['torch_geo_graphsage'],
                 path=self.config_path,
-                config_dict=self.config['graphsage']
-            )
-        res = self.gsc.lin_grid_search(grid_dict, nodes, edges)
+                nodes=nodes, 
+                edges=edges,
+        )   
+        res = self.graphsage.lin_grid_search(grid_dict, nodes, edges)
         return res
           
     def train_lstm(self):
@@ -104,6 +84,21 @@ class Orchestrator():
             self.init_lstm()
         loss_dict = self.inductiveController.train_model()
         return (loss_dict)
+    
+    def train_graphsyntesizer2(self):
+        if not self.graphsynthesizer2:
+            self.init_graphsynthesizer2()
+        loss_dict, epoch_loss, val_loss = self.graphsynthesizer2.fit()
+        return loss_dict
+    
+    def init_graphsynthesizer2(self):
+        self.graphsynthesizer2 = GraphSynthesizer2(
+            self._load_nodes(),
+            self._load_embed(),
+            self._load_edges(),
+            "",
+            self.config['GraphSynthesizer2']
+        )
     
     def init_lstm(self):
         nodes = self._load_nodes()
@@ -123,9 +118,9 @@ class Orchestrator():
         res = self.inductiveController.lin_grid_search(grid_dict)
         return res 
     
-    def create_synthetic_walks(self, target_cnt, synth_node_file_name=None, map_real_time=True):
+    def create_synthetic_walks(self, synthesizer, target_cnt, synth_node_file_name=None, map_real_time=True):
         generated_nodes = self._load_synthetic_nodes(synth_node_file_name)
-        self.synth_walks = self.inductiveController.create_synthetic_walks(generated_nodes, target_cnt=target_cnt, map_real_time=map_real_time)
+        self.synth_walks = synthesizer.create_synthetic_walks(generated_nodes, target_cnt=target_cnt, map_real_time=map_real_time)
         pickle.dump(self.synth_walks, open(self.config_path + self.config['synth_walks'], "wb"))
      
     def generate_synth_graph(self):

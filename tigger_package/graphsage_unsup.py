@@ -1,6 +1,7 @@
 #%%
 import os
 import time
+import pickle
 
 import torch
 import torch.nn.functional as nnf
@@ -9,6 +10,7 @@ from torch_geometric.nn import GraphSAGE
 import torch_geometric as tg
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 
 class TorchGeoGraphSageUnsup():
     '''Torch geometric implementation of GraphSage unsupervised.
@@ -16,6 +18,7 @@ class TorchGeoGraphSageUnsup():
 
     def __init__(self, config_dict, path, nodes, edges) -> None:
         self.config_path = path + config_dict['embed_path']
+        self.patience = 300
         for key, val in config_dict.items():
             setattr(self, key, val)
             
@@ -25,6 +28,9 @@ class TorchGeoGraphSageUnsup():
         os.makedirs(self.model_path, exist_ok=True)
     
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.init_model(nodes, edges)
+        
+    def init_model(self, nodes, edges):    
         data = self.init_dataset(nodes, edges)
         transform = tg.transforms.RandomLinkSplit(
             num_val=0, num_test=self.num_test, is_undirected=False, 
@@ -90,6 +96,8 @@ class TorchGeoGraphSageUnsup():
         start = time.time()
         losses = []
         val_losses = []
+        best_validation_loss = float('inf')
+        early_stopping_counter = 0
         for epoch in range(self.epoch):
             
             self.model.train()
@@ -103,6 +111,18 @@ class TorchGeoGraphSageUnsup():
             
             losses.append(loss)
             val_losses.append(test_loss)
+            
+            #check for early stopping
+
+            if test_loss < best_validation_loss:
+                best_validation_loss = test_loss
+                early_stopping_counter = 0
+            else:
+                early_stopping_counter += 1
+
+            if early_stopping_counter >= self.patience:
+                print(f'Early stopping after {epoch + 1} epochs with no improvement in validation loss.')
+                break
             
         end = time.time()
         
@@ -123,6 +143,52 @@ class TorchGeoGraphSageUnsup():
         df.to_parquet(self.config_path + 'embedding.parquet')
         return df
         
+    def lin_grid_search(self, grid_dict, nodes, edges):
+        grid_param = list(grid_dict.keys())[0]
+        vals = grid_dict[grid_param]
+        res = {}
+        
+        for val in vals:
+            run = {}
+            setattr(self, grid_param, val)
+            self.init_model(nodes, edges)
+            
+            train_metrics = self.fit()
+            run['grid_param'] = grid_param
+            run['grid_value'] = val
+            run['loss'] = np.mean(train_metrics['train_loss'][-10:])
+            run['val_loss'] = np.mean(train_metrics['val_loss'][-10:])
+            run['train_metrics'] = train_metrics
+            
+            val_name = val[0] if type(val)==list else val
+            res[val_name]=run
+                   
+        pickle.dump(res, open(self.model_path + "grid_search_" + grid_param +".pickle" , "wb"))
+        
+        if self.verbose>=2:
+            self.plot_grid(res)
+            
+        return res
+
+    def plot_grid(self, res):
+        losses = []
+        val_losses = []
+        for param_val, run in res.items():
+            losses.append(run['loss'])
+            val_losses.append(run['val_loss'])
+
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        keys = [str(k) for k in res.keys()]
+        X_axis = np.arange(len(keys))
+        ax1.bar(X_axis+0.2, losses, width=0.3, label='loss')
+        ax1.bar(X_axis-0.2, val_losses, width=0.3, label='val_loss')
+        ax1.set_xticks(X_axis, keys)
+
+        for k, v in res.items():
+            ax2.plot(v['train_metrics']['val_loss'], label=str(k))
+        ax2.legend(bbox_to_anchor=(1.25, 1.0))
+        print(f"loss: {losses}")
+        print(f"val loss: {val_losses}")
     
     def print_metrics(self, train_metrics):
 

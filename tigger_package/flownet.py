@@ -76,7 +76,7 @@ class FlowNet():
         early_stop = tf.keras.callbacks.EarlyStopping(
                 monitor='val_loss',
                 min_delta=0,
-                patience=50,
+                patience=100,
             )
 
         history = self.model.fit(x=x_data,
@@ -172,7 +172,8 @@ class FlowNet():
                 "loss": np.mean(hist.history['loss'][-4:]),
                 "val_loss": np.mean(hist.history['val_loss'][-4:]),
             }
-            res[val]=run
+            val_name = val[0] if type(val)==list else val
+            res[val_name]=run
             
         if self.verbose>=2:
             self.plot_grid(res)
@@ -185,10 +186,13 @@ class FlowNet():
             losses.append(v['loss'])
             val_losses.append(v['val_loss'])
 
-        fig, (ax1, ax2) = plt.subplots(1, 2)
+        fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
         keys = [str(k) for k in res.keys()]
-        ax1.bar(keys, losses, label='loss')
-        ax1.bar(keys, val_losses, label='val_loss')
+        X_axis = np.arange(len(keys))
+        ax1.bar(X_axis+0.2, losses, width=0.3, label='loss')
+        ax1.bar(X_axis-0.2, val_losses, width=0.3, label='val_loss')
+        ax1.set_xticks(X_axis, keys)
+        
         for k, v in res.items():
             ax2.plot(v['hist']['val_loss'], label=str(k))
         ax2.legend()

@@ -18,7 +18,6 @@ import torch.optim as optim
 from tigger_package.utils import prepare_sample_probs, Edge, Node
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
-from sklearn.cluster import KMeans
 from sklearn.neighbors import BallTree
 import tigger_package.edge_node_lstm
 importlib.reload(tigger_package.edge_node_lstm)
@@ -558,9 +557,10 @@ class InductiveController:
         plt.show()
         
     def plot_loss(self, loss_dict):
-        fig, (ax1, ax2) = plt.subplots(1, 2)
+        fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
         ax1.plot(loss_dict['epoch_loss'], label='loss')
         ax1.plot(loss_dict['val_loss'], label='val_loss')
+        ax1.set_yscale("log")
         ax1.legend()
         
         val_losses = loss_dict['val_dict']

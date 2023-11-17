@@ -30,7 +30,9 @@ class NodeDistributionMetrics:
             )
             ws_dist[col] = ws
             
-        ws_df = pd.DataFrame.from_dict(ws_dist, orient='index', columns=['Wasserstein_dist'] )
+        ws_df = pd.DataFrame.from_dict(ws_dist, orient='index', columns=['value'] )
+        ws_df['type'] = 'node_attributes'
+        ws_df['metric'] = 'Wasserstein_distance'
         
         return ws_df
             
@@ -50,11 +52,13 @@ class NodeDistributionMetrics:
                 ax.legend(bbox_to_anchor=(1.3, 1.))
                 
 class EdgeDistributionMetrics:
-    def __init__(self, edges, synth_edges):
+    def __init__(self, edges, synth_edges, temp_dir='temp/', gtrie_dir='~/Downloads/gtrieScanner_src_01/'):
         self.edges = edges
         self.edges_degree = None
         self.synth_edges = synth_edges
         self.synth_edges_degree = None
+        self.temp_dir = temp_dir
+        self.gtrie_dir = gtrie_dir
         
         cols = list(self.edges.columns)
         cols.remove('end')
@@ -72,7 +76,9 @@ class EdgeDistributionMetrics:
             )
             ws_dist[col] = ws
             
-        ws_df = pd.DataFrame.from_dict(ws_dist, orient='index', columns=['Wasserstein_dist'] )
+        ws_df = pd.DataFrame.from_dict(ws_dist, orient='index', columns=['value'] )
+        ws_df['type'] = 'edge_attributes'
+        ws_df['metric'] = 'Wasserstein_distance'
         
         return ws_df
             
@@ -110,7 +116,9 @@ class EdgeDistributionMetrics:
             )
             ws_dist[direction] = ws
             
-        ws_df = pd.DataFrame.from_dict(ws_dist, orient='index', columns=['Wasserstein_dist'] )
+        ws_df = pd.DataFrame.from_dict(ws_dist, orient='index', columns=['value'] )
+        ws_df['type'] = 'edge_degree'
+        ws_df['metric'] = 'Wasserstein_distance'
         
         return ws_df
     
@@ -182,6 +190,7 @@ class EdgeDistributionMetrics:
         ax.set_xticks(np.arange(0, df.shape[0]))
         ax.set_xticklabels(df['Subgraph.1'], rotation=90)
         
+        widget
         
         fig.show()
 
@@ -216,8 +225,15 @@ class EdgeDistributionMetrics:
             total = df['Org. Frequency'].sum() + 2 * triangles
             cluster_coef = triangles * 3 / total
 
-            cc[name] = cluster_coef.to_numpy()[0]   
-        return cc
+            cc[name] = cluster_coef.to_numpy()[0]  
+            
+        # convert to datafraome
+        cc['dif_cluster_coef'] = cc['edges'] - cc['synth_edges']
+        cc_df = pd.DataFrame.from_dict(cc, orient='index', columns=['value']) 
+        cc_df['type'] = 'cluster_coef'
+        cc_df['metric'] = 'cluster_coefficient'
+        
+        return cc_df
 
     def get_undirected_degrees(self):
         degree_dict = {}

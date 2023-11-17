@@ -4,14 +4,14 @@ import pandas as pd
 import numpy as np
 print(os.getcwd())
 
-#%%
+#%% variables
 SOURCE_PATH = 'original_data/'  #input graph
 MOOC_ACTION_FILE = 'mooc_actions.tsv'
 MOOC_FEATURES_FILE = 'mooc_action_features.tsv'
 MOOC_LABEL_FILE = 'mooc_action_labels.tsv'
 FEATURE_NAMES = ['FEATURE0', 'FEATURE1', 'FEATURE2', 'FEATURE3', 'weight']
 
-#%%
+#%% prepaire edge data
 # def prep_edge_data():
 mooc_action = pd.read_csv(SOURCE_PATH + MOOC_ACTION_FILE, sep='\t')
 features = pd.read_csv(SOURCE_PATH + MOOC_FEATURES_FILE, sep='\t')
@@ -77,29 +77,25 @@ for fld in FEATURE_NAMES:
     col = edges[fld]
     edges[fld] = (col-col.min())/(col.max()-col.min())
 
-edges.to_parquet("mooc_edges.parquet")
+# edges.to_parquet("mooc_edges.parquet")
 
 
 
-#%%
+#%% VALIDATE DATA
+# ------------------
 
+edges = pd.read_parquet("mooc_edges.parquet")
+nodes = pd.read_parquet("mooc_nodes.parquet")
 
-extended_edges = edges.merge(labels, on='ACTIONID', how='inner')
-    print(f"input_df {train_edges.shape[0]}, after adding labels {graph_edges.shape[0]}")
+edges.describe()
+# %%
 
-    # remove ACTIONID filed
-    graph_edges = graph_edges.drop("ACTIONID", axis='columns')
-    print(f"edge colunms {graph_edges.columns}")
-    G = nx.from_pandas_edgelist(graph_edges, 'src', 'dst', edge_attr=True, create_using=nx.DiGraph)
-    print(f"edge check: df:{graph_edges.shape[0]}, graph edges: {G.number_of_edges()}")
-    print(f"node check: users+ courses:{graph_edges['src'].nunique() + graph_edges['dst'].nunique()}, nodes: {G.number_of_nodes()}")
+mooc_action = pd.read_csv(SOURCE_PATH + MOOC_ACTION_FILE, sep='\t')
+mooc_action.hist()
 
-    #update node attribute
-    for n in G.nodes(data=True):
-        if n[0].startswith("U"):
-            n[1]['attr_is_user']=1
-        else:
-            n[1]['attr_is_user']=0
-
-    G = nx.convert_node_labels_to_integers(G, label_attribute='label')
-    return G
+# %%
+features = pd.read_csv(SOURCE_PATH + MOOC_FEATURES_FILE, sep='\t')
+features.hist()
+# %%
+nodes.hist()
+# %%

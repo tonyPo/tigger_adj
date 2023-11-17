@@ -7,10 +7,10 @@ flownet:
   # model structure
   activation: 'sigmoid'
   hidden_units: [32,32]
-  number_of_bijectors: 6
+  number_of_bijectors: 12
   # training params
   epoch: 3000
-  learning_rate: 0.00001
+  learning_rate: 0.001
   batch_size: 36 
 
   # print freq of loss during training
@@ -21,54 +21,23 @@ flownet:
   
 torch_geo_graphsage:
   embed_path: 'embed/'
-  embedding_dim: 16
+  embedding_dim: 64
    #20000  # epoch for training
-  epoch: 30
+  epoch: 3000
   lr: 0.001
-  validation_fraction: 0.02
   batch_size: 36
   num_layers: 2
   verbose: 2
-  num_neighbors: [5, 5]
+  num_neighbors: [10, 10]
   dropout: 0.1
   num_test: 0.3
 
-
-
-graphsage:
-  embed_path: 'embed/'
-  embedding_dim: 16
-  verbose_level: 2
-   #20000  # epoch for training
-  training_epoch: 3000
-  #4000 # epoch per boosting run
-  boost_epoch: 1500
-  #100 # number of boosting runs
-  boost_times: 2
-  # additional negative edges added as part of boosting
-  add_edges: 30
-  learning_rate: 0.0001
-  save_number: 0
-  validation_fraction: 0.02
-  batch_size: 36
-  verbose: 2
-  level: 2
-  dropout: 0.3
-
-dgi:
-  batch_size: 128
-  num_samples: [7, 7]
-  layer_sizes: [128, 128]
-  activations: ["relu", "relu"]
-  epochs: 200
-  learning_rate: 0.001
-
 lstm:
-  n_walks: 3000
+  n_walks: 10000
   test_n_walks: 100
   batch_size: 50
-  num_clusters: 12
-  cluster_emb_dim: 8
+  num_clusters: 16
+  cluster_emb_dim: 4
   mu_hidden_dim: 64
   l_w: 12
   num_epochs: 400
@@ -81,6 +50,19 @@ lstm:
   dropout: 0.1
   nb_lstm_layers: 1
   weight_decay: 0.0005
+
+GraphSynthesizer2:
+  synth2_path: None
+  test_fraction: 0.3
+  batch_size: 128
+  num_clusters: 12
+  cluster_dim: 3
+  epochs: 5000
+  z_dim: 128
+  activation_function_str: 'relu'
+  lr: 0.004
+  weight_decay: 0.0001
+  verbose: 2
 
 
   

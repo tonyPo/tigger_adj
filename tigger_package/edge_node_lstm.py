@@ -6,6 +6,14 @@ import torch.nn.functional as nnf
 #sys.path.append(current_file_directory)
 
 
+# ##########################
+# TO DO
+# Check optimer
+# Check the gather constructie
+# ######################
+
+
+
 class EdgeNodeLSTM(nn.Module):
     def __init__(self, vocab, gnn_dim, nb_layers, num_components, edge_attr_dim,
                  node_attr_dim, nb_lstm_units=100, clust_dim=3, mu_hidden_dim=100,
@@ -146,7 +154,7 @@ class EdgeNodeLSTM(nn.Module):
         # pack_padded_sequence so that padded items in the sequence won't be shown to the LSTM
         X = torch.nn.utils.rnn.pack_padded_sequence(X, x_length, batch_first=True,enforce_sorted=False)
         X, self.hidden = self.lstm(X, self.hidden)  # now run through LSTM
-        X, _ = torch.nn.utils.rnn.pad_packed_sequence(X, batch_first=True)  # unpacking operation
+        X, _ = torch.nn.utils.rnn.pad_packed_sequence(X, batch_first=True, total_length=seq_len)  # unpacking operation
         X = X.contiguous()
         
         # ---------------------

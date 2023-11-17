@@ -1,59 +1,49 @@
+# config MOOC
+
 flownet:
   overwrite: True
   flownet_config_path: 'flowmodel/'
 
   # model structure
   activation: 'sigmoid'
-  hidden_units: [8,8]
+  hidden_units: [4,4]
   number_of_bijectors: 16
-  # training params
+  # training params 1500 epoch
   epoch: 1500
   learning_rate: 0.00001
   batch_size: 1024 
 
   # print freq of loss during training
-  n_disp: 20
+  n_disp: 10
   verbose: 2
   # only needed when loading pretrain model
   event_dim: 7
   
-graphsage:
+torch_geo_graphsage:
   embed_path: 'embed/'
-  embedding_dim: 4
-  verbose_level: 2
+  embedding_dim: 64
    #20000  # epoch for training
-  training_epoch: 3000
-  #4000 # epoch per boosting run
-  boost_epoch: 1500
-  #100 # number of boosting runs
-  boost_times: 2
-  # additional negative edges added as part of boosting
-  add_edges: 30
-  learning_rate: 0.00001
-  save_number: 0
-  validation_fraction: 0.005
+  epoch: 1000
+  lr: 0.001
   batch_size: 1024
+  num_layers: 2
   verbose: 2
-  level: 1
-  dropout: 0.3
+  num_neighbors: [5, 5]
+  dropout: 0.1
+  # test set fraction
+  num_test: 0.3
 
-dgi:
-  batch_size: 128
-  num_samples: [7, 7]
-  layer_sizes: [128, 128]
-  activations: ["relu", "relu"]
-  epochs: 200
-  learning_rate: 0.001
+
 
 lstm:
   n_walks: 3000
-  test_n_walks: 100
-  batch_size: 50
+  test_n_walks: 300
+  batch_size: 256
   num_clusters: 12
-  cluster_emb_dim: 8
+  cluster_emb_dim: 4
   mu_hidden_dim: 64
   l_w: 12
-  num_epochs: 400
+  num_epochs: 3000
   minimum_walk_length: 2
   verbose: 1
   pca_components: 8
