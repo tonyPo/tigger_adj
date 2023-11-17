@@ -6,6 +6,9 @@ __pycache__/
 # outdated stuf
 old/
 
+# large dataset
+data/erdos
+
 # C extensions
 *.so
 ## Folders
