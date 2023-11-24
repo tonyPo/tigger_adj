@@ -10,6 +10,7 @@ from tigger_package.graph_generator import GraphGenerator
 from tigger_package.flownet import FlowNet
 from tigger_package.inductive_controller import InductiveController
 from tigger_package.variant2 import GraphSynthesizer2
+from tigger_package.tab_ddpm.train_tab_ddpm import Tab_ddpm_controller
 
 class Orchestrator():
     def __init__(self, config_path):
@@ -17,29 +18,35 @@ class Orchestrator():
             config_dict = yaml.safe_load(file)
         self.config = config_dict
         self.config_path = config_path
-        self.flownet = None
+        if self.config['node_synthesizer_class'] == 'tab_ddpm':
+            self.node_synthesizer_class = Tab_ddpm_controller 
+        else:
+            self.node_synthesizer_class = FlowNet
+        
+        self.node_synthesizer = None
         self.graphsage = None
         self.inductiveController = None
         self.graphsynthesizer2 = None
+        
     
-    def train_flow(self):
+    def train_node_synthesizer(self):
         with tf.device('/CPU:0'):
             node = self._load_nodes()
             embed = self.load_normalized_embed()
-            self.flownet = FlowNet(
+            self.node_synthesizer = self.node_synthesizer_class(
                 config_path=self.config_path,
-                config_dict=self.config['flownet'])
-            name, hist = self.flownet.train(embed, node)
+                config_dict=self.config[self.config['node_synthesizer_class']])
+            name, hist = self.node_synthesizer.train(embed, node)
         return (name, hist)
     
-    def sample_flownet(self, model_name=None):
+    def sample_node_synthesizer(self, model_name=None):
         name = self.config_path + self.config['synth_nodes']
         if model_name:
-            self.flownet = FlowNet(
+            self.node_synthesizer = self.node_synthesizer_class(
                 config_path=self.config_path,
-                config_dict=self.config['flownet'])
-            self.flownet.load_model(model_name)
-        self.flownet.sample_model(self.config['target_node_count'], name)
+                config_dict=self.config[self.config['node_synthesizer_class']])
+            self.node_synthesizer.load_model(model_name)
+        self.node_synthesizer.sample_model(self.config['target_node_count'], name)
         
     def lin_grid_search_flownet(self, grid_dict):
         with tf.device('/CPU:0'):
@@ -48,7 +55,7 @@ class Orchestrator():
             if not self.flownet:
                 self.flownet = FlowNet(
                     config_path=self.config_path,
-                    config_dict=self.config['flownet'])
+                    config_dict=self.config[self.config['node_synthesizer_class']])
             res = self.flownet.lin_grid_search(grid_dict, embed, node)
         return res
     

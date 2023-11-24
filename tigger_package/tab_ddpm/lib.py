@@ -62,6 +62,11 @@ class Dataset:
     y_info: Dict[str, Any]
     task_type: TaskType
     n_classes: Optional[int]
+    embed_dim: Optional[int] = 0
+    num_cols: Optional[list[str]] = None
+    cols: Optional[list[str]] = None
+    
+    
 
     @classmethod
     def make_dataset(cls, nodes, embed, dataset_config, model_config):
@@ -69,8 +74,8 @@ class Dataset:
         """
         num_cols = [n for n in nodes.columns if n not in dataset_config['cat_cols']]
         X_num = nodes[num_cols].values if len(num_cols) > 0 else None
-        if embed:
-            X_num = np.concatenate([X_num, embed.values], axis=1)
+        if embed is not None and X_num is not None:
+            X_num = np.concatenate([embed.values, X_num], axis=1) 
         X_cat = nodes[dataset_config['cat_cols']].values  if  len(dataset_config['cat_cols']) > 0 else None
         
         ixs = np.arange(nodes.shape[0])
@@ -81,7 +86,7 @@ class Dataset:
         if X_cat is not None:
             X_cat = {'train': X_cat[train_ixs], 'val': X_cat[val_ixs]}
 
-        return Dataset(
+        dataset = Dataset(
             X_num,
             X_cat,
             y = {},
@@ -89,6 +94,12 @@ class Dataset:
             task_type=TaskType(dataset_config['task_type']),
             n_classes=model_config['num_classes']
         )
+        
+        dataset.embed_dim = embed.shape[1]
+        dataset.num_cols = num_cols
+        dataset.cols = nodes.columns
+        
+        return dataset
 
     @classmethod
     def from_dir(cls, dir_: Union[Path, str]) -> 'Dataset':

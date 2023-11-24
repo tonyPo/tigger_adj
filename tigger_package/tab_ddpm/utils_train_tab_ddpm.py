@@ -28,37 +28,6 @@ def concat_y_to_X(X, y):
         return y.reshape(-1, 1)
     return np.concatenate([y.reshape(-1, 1), X], axis=1)
 
-# def make_dataset(nodes, embed, dataset_config, model_config, ):
-#     """created a dataset from nodes and embed and split in train and validation
-#     """
-#     num_cols = [n for n in nodes.columns if n not in dataset_config['cat_cols']]
-#     X_num = nodes[num_cols].values if len(num_cols) > 0 else None
-#     X_num = 
-#     X_cat = nodes[dataset_config['cat_cols']].values  if  len(dataset_config['cat_cols']) > 0 else None
-    
-#     ixs = np.arange(nodes.shape[0])
-#     train_ixs, val_ixs = train_test_split(ixs, test_size=dataset_config['val_fraction'], random_state=777)
-    
-#     if X_num is not None:
-#         X_num = {'train': X_num[train_ixs], 'val': X_num[val_ixs]}
-#     if X_cat is not None:
-#         X_cat = {'train': X_cat[train_ixs], 'val': X_cat[val_ixs]}
-
-#     D = Dataset(
-#         X_num,
-#         X_cat,
-#         y = {},
-#         y_info={},
-#         task_type=TaskType(dataset_config['task_type']),
-#         n_classes=model_config['num_classes']
-#     )
-#     return D
-# """
-#     removed transformations  above. We assume that the dataset is already normalised, one hot encoded and has no Nans
-#     return transform_dataset(D, T, None)
-# """    
-
-
 def normal_kl(mean1, logvar1, mean2, logvar2):
     """
     Compute the KL divergence between two gaussians.
