@@ -52,7 +52,7 @@ class InductiveController:
         self.vocab = self.create_lstm_vocab()
         self.node_features = self.create_feature_matrix_from_pandas(nodes)
         
-        self.node_embedding_matrix, self.normalized_dataset = self.create_node_embedding_matrix_from_dict(embed)
+        self.node_embedding_matrix = self.create_node_embedding_matrix_from_dict(embed)
         self.cluster_labels, self.kmeans, self.pca = self.reduce_embedding_dim_and_cluster()
         self.define_sample_with_prob_per_edge()
         
@@ -162,7 +162,7 @@ class InductiveController:
         feat_dim = self.node_features.shape[1]
         vocab_id = self.vocab[edge.end]
         random_walk = [(list(edge.attributes), 
-                        self.normalized_dataset[vocab_id].tolist(), 
+                        self.node_embedding_matrix[vocab_id].tolist(), 
                         self.cluster_labels[vocab_id],
                         self.node_features.iloc[vocab_id].values.tolist())]
         done = False
@@ -172,7 +172,7 @@ class InductiveController:
                 done = True
                 random_walk.append(
                     (list(np.ones(edge_shape)),
-                     self.normalized_dataset[1].tolist(),
+                     self.node_embedding_matrix[1].tolist(),
                      self.cluster_labels[1],
                      list(np.ones(feat_dim)))
                     )  # end vocab id and cluster
@@ -180,7 +180,7 @@ class InductiveController:
                 edge = np.random.choice(edge.outgoing_edges, 1, edge.out_nbr_sample_probs)[0]
                 vocab_id = self.vocab[edge.end]
                 random_walk.append((list(edge.attributes), 
-                                    self.normalized_dataset[vocab_id].tolist(), 
+                                    self.node_embedding_matrix[vocab_id].tolist(), 
                                     self.cluster_labels[vocab_id], 
                                     self.node_features.iloc[vocab_id].values.tolist()))
                 ct += 1
@@ -201,17 +201,11 @@ class InductiveController:
                 arr = embed.loc[item,:].values
             index = self.vocab[item]
             node_embedding_matrix[index] = arr
-       
-        # create row normalized dataset excluding <padding>
-        norm = np.linalg.norm(node_embedding_matrix, ord=np.inf, axis=1)
-        norm[norm==0] = 1  # set zero to 1 to avoid dividing by zero
-        normalized_dataset = node_embedding_matrix / norm[:, np.newaxis] 
-        
-        
+           
         if self.verbose >= 2:
              print(f"Node embedding matrix has shape {node_embedding_matrix.shape}") 
         
-        return (node_embedding_matrix, normalized_dataset)  
+        return node_embedding_matrix  
     
     def create_feature_matrix_from_pandas(self, nodes):
         nodes  #has id as index with node number
@@ -363,7 +357,7 @@ class InductiveController:
     def initialize_model(self):
         edge_dim = self.edges[0].attributes.shape[0]  # edge dimension
         node_attr_dim = self.node_features.shape[1]
-        embed_dim = self.normalized_dataset.shape[1]
+        embed_dim = self.node_embedding_matrix.shape[1]
         elstm = EdgeNodeLSTM(
             vocab=self.vocab, 
             gnn_dim=embed_dim,
@@ -578,7 +572,7 @@ class InductiveController:
     def synthetic_nodes_to_seqs(self, node_ids, nodes):
         """convert list consisting of node embed, node attr and edge attr concatenated
         into seqs dict"""
-        embed_dim = self.normalized_dataset.shape[1]
+        embed_dim = self.node_embedding_matrix.shape[1]
         
         seqs = {}
         seqs['node_id'] = node_ids
@@ -620,7 +614,7 @@ class InductiveController:
     def y_hat_to_x_batch(self, y_hat, searcher, synthetic_nodes, overwrite_node_data=True):
         """removes the _hat phrase from the dict keys and maps the inferece node embed and edge
         to the generated synthetic nodes"""
-        embed_dim = self.normalized_dataset.shape[1]
+        embed_dim = self.node_embedding_matrix.shape[1]
         x_batch = {}
         
         # remove -hat phrase in key
@@ -660,7 +654,7 @@ class InductiveController:
         return input_batch
 
     def add_end_node(self, synthetic_nodes):
-        embed_dim = self.normalized_dataset.shape[1]
+        embed_dim = self.node_embedding_matrix.shape[1]
         node_attr_dim = self.node_features.shape[1]
         end_node_id = synthetic_nodes.shape[0]
         synthetic_nodes.loc[end_node_id] = [1]*(embed_dim+node_attr_dim)
@@ -715,7 +709,7 @@ class InductiveController:
         return generated_seqs
                 
     def map_to_synth_nodes(self, x_batch, searcher, synthetic_nodes):
-        embed_dim = self.normalized_dataset.shape[1]
+        embed_dim = self.node_embedding_matrix.shape[1]
         
          # get nearest synthic node
         inferred_node_vector = torch.cat((x_batch['node_embed'], x_batch['node_attr']), -1)

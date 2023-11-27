@@ -16,7 +16,7 @@ class InductiveControllerTest(unittest.TestCase):
         base_folder = 'unittest/test_data/test_graph/'
         self.orchestrator = Orchestrator(base_folder)
         self.orchestrator.init_lstm()
-        self.inductiveController = self.orchestrator.inductiveController
+        self.inductiveController = self.orchestrator.lstm_controller
     
     def test_input_edge_dims(self):
         edge_cols = self.inductiveController.edge_attr_cols

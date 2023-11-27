@@ -10,6 +10,7 @@ try:
 except:
     pass
 from collections import defaultdict
+from tigger_package.tools import plot_hist 
 
 class NodeDistributionMetrics:
     def __init__(self, nodes, synth_nodes, gtrie_dir=None, temp_dir=None):
@@ -83,18 +84,7 @@ class EdgeDistributionMetrics:
         return ws_df
             
     def plot_hist(self):
-        
-        cnt = len(self.cols)
-        horz_plots = 4
-        vert_plots = math.ceil(cnt/horz_plots)
-        
-        fig = plt.figure(figsize=(10,10))
-        for i, col in enumerate(self.cols):
-            ax = fig.add_subplot(vert_plots, horz_plots, i+1)
-            ax.hist(self.edges[col].values, bins=20, color='green', label='orig', alpha=0.5, density=True)
-            ax.hist(self.synth_edges[col].values, bins=20, color='red', label='synth', alpha=0.5, density=True)
-            if i==cnt-1:
-                ax.legend(bbox_to_anchor=(1.3, 1.))
+        plot_hist(self.edges.drop(['start', 'end'], axis=1), self.synth_edges.drop(['src', 'dst'], axis=1))
                 
     def get_degrees_dist(self):
         if not self.edges_degree:
@@ -130,9 +120,9 @@ class EdgeDistributionMetrics:
         synth_out = self.synth_edges_degree['out_degree']
         
         # calculate bins
-        out_max = max(np.max(orig_out), np.max(synth_out))
+        out_max = max(np.max(orig_out.keys()), np.max(synth_out.keys()))
         out_bins = [i* math.ceil(out_max/20) for i in range(20)]
-        in_max =max(np.max(orig_in), np.max(synth_in))
+        in_max =max(np.max(orig_in.keys()), np.max(synth_in.keys()))
         in_bins = [i* math.ceil(in_max/20) for i in range(20)]
         
         plt.style.use('seaborn-v0_8')
@@ -189,8 +179,6 @@ class EdgeDistributionMetrics:
         ax.legend()
         ax.set_xticks(np.arange(0, df.shape[0]))
         ax.set_xticklabels(df['Subgraph.1'], rotation=90)
-        
-        widget
         
         fig.show()
 

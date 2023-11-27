@@ -7,7 +7,7 @@ __pycache__/
 old/
 
 # large dataset
-data/erdos
+data
 
 # C extensions
 *.so

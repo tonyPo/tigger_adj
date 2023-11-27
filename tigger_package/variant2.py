@@ -197,7 +197,8 @@ class GraphSynthesizer2(nn.Module):
         
         # logit to zero penalty
         mean_logit = torch.mean(cluster_logits_out, dim=1)
-        zero_logit_loss = 0.0001 / mean_logit
+        mean_logit = torch.min(mean_logit, torch.tensor([1]))
+        zero_logit_loss = 0.01 / mean_logit
         zero_logit_loss = torch.mean(zero_logit_loss)
         loss = loss + zero_logit_loss
         

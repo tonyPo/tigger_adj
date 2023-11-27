@@ -8,20 +8,21 @@ from tigger_package.tab_ddpm.lib import prepare_fast_dataloader, Dataset
 
 
 class Trainer:
-    def __init__(self, diffusion, train_iter, lr, weight_decay, steps, device=torch.device('cuda:1')):
+    def __init__(self, diffusion, train_iter, lr, weight_decay, steps, device=torch.device('cuda:1'),
+                 valiation_iter=None):
         self.diffusion = diffusion
         self.ema_model = deepcopy(self.diffusion._denoise_fn)
         for param in self.ema_model.parameters():
             param.detach_()
 
         self.train_iter = train_iter
+        self.validation_iter = valiation_iter
         self.steps = steps
         self.init_lr = lr
         self.optimizer = torch.optim.AdamW(self.diffusion.parameters(), lr=lr, weight_decay=weight_decay)
         self.device = device
-        self.loss_history = pd.DataFrame(columns=['step', 'mloss', 'gloss', 'loss'])
+        self.loss_history = pd.DataFrame(columns=['step', 'mloss', 'gloss', 'loss', 'val_loss'])
         self.log_every = 100
-        self.print_every = 500
         self.ema_every = 1000
 
     def _anneal_lr(self, step):
@@ -49,29 +50,46 @@ class Trainer:
 
         curr_count = 0
         while step < self.steps:
-            x, out_dict = next(self.train_iter)
-            out_dict = {'y': out_dict}
-            batch_loss_multi, batch_loss_gauss = self._run_step(x, out_dict)
+            for x, out_dict in iter(self.train_iter):
+                out_dict = {'y': out_dict}
+                batch_loss_multi, batch_loss_gauss = self._run_step(x, out_dict)
+                self.update_ema(self.ema_model.parameters(), self.diffusion._denoise_fn.parameters())
 
-            self._anneal_lr(step)
+                self._anneal_lr(step)  # adjust learning rate
 
-            curr_count += len(x)
-            curr_loss_multi += batch_loss_multi.item() * len(x)
-            curr_loss_gauss += batch_loss_gauss.item() * len(x)
-
+                curr_count += len(x)  # Add batch size to counter
+                curr_loss_multi += batch_loss_multi.item() * len(x)  # add multinominal loss to counter
+                curr_loss_gauss += batch_loss_gauss.item() * len(x)  # add categorical loss to counter
+                
             if (step + 1) % self.log_every == 0:
-                mloss = np.around(curr_loss_multi / curr_count, 4)
-                gloss = np.around(curr_loss_gauss / curr_count, 4)
-                if (step + 1) % self.print_every == 0:
-                    print(f'Step {(step + 1)}/{self.steps} MLoss: {mloss} GLoss: {gloss} Sum: {mloss + gloss}')
-                self.loss_history.loc[len(self.loss_history)] =[step + 1, mloss, gloss, mloss + gloss]
+                mloss = np.around(curr_loss_multi / curr_count, 4)  # calculate avertage multinominal loss
+                gloss = np.around(curr_loss_gauss / curr_count, 4)  # calculate average categorical loss
+                val_loss = self.run_validation_step()
+                
+                if (step + 1) % self.log_every == 0:
+                    print(f'\r Step {(step + 1)}/{self.steps} MLoss: {mloss} GLoss: {gloss} Sum: {mloss + gloss} val:{val_loss:.4f}', end="")
+                
+                self.loss_history.loc[len(self.loss_history)] =[step + 1, mloss, gloss, mloss + gloss, val_loss]
                 curr_count = 0
                 curr_loss_gauss = 0.0
                 curr_loss_multi = 0.0
 
-            self.update_ema(self.ema_model.parameters(), self.diffusion._denoise_fn.parameters())
-
             step += 1
+            
+    def run_validation_step(self):
+        self.diffusion.eval()
+        loss = 0
+        cnt = 0
+        out_dict = {}
+        for x, out_val in iter(self.validation_iter):
+            x = x.to(self.device)     
+            out_dict['y'] = out_val.long().to(self.device)
+            loss_multi, loss_gauss = self.diffusion.mixed_loss(x, out_dict)
+            loss += (loss_multi.item() + loss_gauss.item()) * len(x)
+            cnt += len(x)
+            
+        self.diffusion.train()    
+        return loss / cnt
             
     def update_ema(self, target_params, source_params, rate=0.999):
         """
@@ -121,6 +139,7 @@ class Tab_ddpm_controller:
         self.model.to(self.device)
 
         train_loader = prepare_fast_dataloader(self.dataset, split='train', batch_size=self.batch_size)
+        validation_loader = prepare_fast_dataloader(self.dataset, split='val', batch_size=self.batch_size)
 
         # create diffusion model with both forward as backward 
         self.diffusion = GaussianMultinomialDiffusion(
@@ -142,7 +161,8 @@ class Tab_ddpm_controller:
             lr=self.lr,
             weight_decay=self.weight_decay,
             steps=self.steps,
-            device=self.device
+            device=self.device,
+            valiation_iter=validation_loader
         )
         trainer.run_loop()
         
@@ -159,7 +179,8 @@ class Tab_ddpm_controller:
         """ samples new nodes"""
         empirical_class_dist = torch.tensor([1])  # only 1 class
         synth_node_cat, synth_node_num, synth_embed = None, None, None
-        x_gen, y_gen = self.diffusion.sample_all(num_samples, self.batch_size, empirical_class_dist.float(), ddim=False)
+        
+        x_gen, y_gen = self.diffusion.sample_all(num_samples*2, self.batch_size, empirical_class_dist.float(), ddim=False)
         X_gen, y_gen = x_gen.numpy(), y_gen.numpy()
 
         num_numerical_features = self.dataset.X_num['train'].shape[1] if self.dataset.X_num is not None else 0
@@ -181,6 +202,7 @@ class Tab_ddpm_controller:
 
         synth_nodes = pd.concat([synth_embed, synth_node], axis=1) 
         synth_nodes = self.post_process(synth_nodes)
+        synth_nodes = synth_nodes.iloc[:num_samples,:]
         synth_nodes.to_parquet(name)     
 
     @staticmethod    
@@ -215,5 +237,5 @@ class Tab_ddpm_controller:
         raise("not implemented")
     
     def plot_history(self, hist):
-        hist.loss.plot()
+        hist[['loss', 'val_loss']].plot(logy=True)
     

@@ -146,7 +146,7 @@ config_path = 'data/test_graph/'
 orchestrator = Orchestrator(config_path)
 
 node = orchestrator._load_nodes()
-embed = orchestrator.load_normalized_embed()
+embed = orchestrator._load_normalized_embed()
 x_data =  embed.join(node, how='inner')
 x_data = x_data.drop('id', axis =1)
 # name, history = orchestrator.train_flow()

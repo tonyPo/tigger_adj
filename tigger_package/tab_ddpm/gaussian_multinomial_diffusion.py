@@ -778,7 +778,7 @@ class GaussianMultinomialDiffusion(torch.nn.Module):
         b = x.shape[0]
         device = x.device
         for t in reversed(range(T)):
-            print(f'Sample timestep {t:4d}', end='\r')
+            # print(f'\r Sample timestep {t:4d}', end='')
             t_array = (torch.ones(b, device=device) * t).long()
             out_num = self._denoise_fn(x, t_array, **out_dict)
             x = self.gaussian_ddim_step(
@@ -786,7 +786,6 @@ class GaussianMultinomialDiffusion(torch.nn.Module):
                 x,
                 t_array
             )
-        print()
         return x
 
 
@@ -902,7 +901,7 @@ class GaussianMultinomialDiffusion(torch.nn.Module):
         )
         out_dict = {'y': y.long().to(device)}
         for i in reversed(range(0, self.num_timesteps)):
-            print(f'Sample timestep {i:4d}', end='\r')
+            # print(f'Sample timestep {i:4d}', end='\r')
             t = torch.full((b,), i, device=device, dtype=torch.long)
             model_out = self._denoise_fn(
                 torch.cat([z_norm, log_z], dim=1).float(),
@@ -943,7 +942,7 @@ class GaussianMultinomialDiffusion(torch.nn.Module):
         )
         out_dict = {'y': y.long().to(device)}
         for i in reversed(range(0, self.num_timesteps)):
-            print(f'Sample timestep {i:4d}', end='\r')
+            # print(f'Sample timestep {i:4d}', end='\r')
             t = torch.full((b,), i, device=device, dtype=torch.long)
             model_out = self._denoise_fn(
                 torch.cat([z_norm, log_z], dim=1).float(),
@@ -956,7 +955,7 @@ class GaussianMultinomialDiffusion(torch.nn.Module):
             if has_cat:
                 log_z = self.p_sample(model_out_cat, log_z, t, out_dict)
 
-        print()
+        # print()
         z_ohe = torch.exp(log_z).round()
         z_cat = log_z
         if has_cat:
@@ -987,6 +986,7 @@ class GaussianMultinomialDiffusion(torch.nn.Module):
             if sample.shape[0] != b:
                 raise FoundNANsError
             num_generated += sample.shape[0]
+            print(f"\r Generated {num_generated} out of {num_samples} = {num_generated/ num_samples *100:.1f}", end="")
 
         x_gen = torch.cat(all_samples, dim=0)[:num_samples]
         y_gen = torch.cat(all_y, dim=0)[:num_samples]

@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+
 class TorchGeoGraphSageUnsup():
     '''Torch geometric implementation of GraphSage unsupervised.
     '''
@@ -141,7 +142,6 @@ class TorchGeoGraphSageUnsup():
         df = pd.DataFrame(embed.numpy())
         df = df.reset_index(names='id')
         df.to_parquet(self.config_path + 'embedding.parquet')
-        return df
         
     def lin_grid_search(self, grid_dict, nodes, edges):
         grid_param = list(grid_dict.keys())[0]

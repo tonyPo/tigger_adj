@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import yaml
 import tensorflow as tf
-
+from sklearn.preprocessing import MinMaxScaler
 from tigger_package.graphsage_unsup import TorchGeoGraphSageUnsup
 from tigger_package.graph_generator import GraphGenerator
 from tigger_package.flownet import FlowNet
@@ -25,14 +25,14 @@ class Orchestrator():
         
         self.node_synthesizer = None
         self.graphsage = None
-        self.inductiveController = None
+        self.lstm_controller = None
         self.graphsynthesizer2 = None
         
     
     def train_node_synthesizer(self):
         with tf.device('/CPU:0'):
             node = self._load_nodes()
-            embed = self.load_normalized_embed()
+            embed = self._load_normalized_embed()
             self.node_synthesizer = self.node_synthesizer_class(
                 config_path=self.config_path,
                 config_dict=self.config[self.config['node_synthesizer_class']])
@@ -51,7 +51,7 @@ class Orchestrator():
     def lin_grid_search_flownet(self, grid_dict):
         with tf.device('/CPU:0'):
             node = self._load_nodes()
-            embed = self.load_normalized_embed()
+            embed = self._load_normalized_embed()
             if not self.flownet:
                 self.flownet = FlowNet(
                     config_path=self.config_path,
@@ -69,7 +69,7 @@ class Orchestrator():
             edges=edges,
         )
         train_metrics = self.graphsage.fit()
-        self.graphsage.get_embedding(nodes, edges)
+        self.graphsage.get_embedding(nodes, edges)        
         return train_metrics
         
         
@@ -87,9 +87,9 @@ class Orchestrator():
         return res
           
     def train_lstm(self):
-        if not self.inductiveController:
+        if not self.lstm_controller:
             self.init_lstm()
-        loss_dict = self.inductiveController.train_model()
+        loss_dict = self.lstm_controller.train_model()
         return (loss_dict)
     
     def train_graphsyntesizer2(self):
@@ -101,7 +101,7 @@ class Orchestrator():
     def init_graphsynthesizer2(self):
         self.graphsynthesizer2 = GraphSynthesizer2(
             self._load_nodes(),
-            self._load_embed(),
+            self._load_normalized_embed(),
             self._load_edges(),
             "",
             self.config['GraphSynthesizer2']
@@ -110,8 +110,8 @@ class Orchestrator():
     def init_lstm(self):
         nodes = self._load_nodes()
         edges =  self._load_edges()
-        embed = self._load_embed()
-        self.inductiveController = InductiveController(
+        embed = self._load_normalized_embed()
+        self.lstm_controller = InductiveController(
             nodes=nodes,
             edges=edges,
             embed=embed,
@@ -120,9 +120,9 @@ class Orchestrator():
         )
        
     def lin_grid_search_lstm(self, grid_dict):
-        if not self.inductiveController:
+        if not self.lstm_controller:
             self.init_lstm()
-        res = self.inductiveController.lin_grid_search(grid_dict)
+        res = self.lstm_controller.lin_grid_search(grid_dict)
         return res 
     
     def create_synthetic_walks(self, synthesizer, target_cnt, synth_node_file_name=None, map_real_time=True):
@@ -130,21 +130,21 @@ class Orchestrator():
         self.synth_walks = synthesizer.create_synthetic_walks(generated_nodes, target_cnt=target_cnt, map_real_time=map_real_time)
         pickle.dump(self.synth_walks, open(self.config_path + self.config['synth_walks'], "wb"))
      
-    def generate_synth_graph(self):
+    def generate_synth_graph(self, synth_nodes_name=None):
         results_dir = self.config_path + self.config['synth_graph_dir']
-        if not self.inductiveController:
-            self.init_lstm()            
+        edge_cols = [c for c in self._load_edges().columns if c not in ['start', 'end']]         
+        node_cols = self._load_nodes().columns
         
         graph_generator = GraphGenerator(
             results_dir = results_dir , 
-            node_cols = self.inductiveController.node_features.columns, 
-            edge_cols = self.inductiveController.edge_attr_cols
+            node_cols = node_cols,
+            edge_cols = edge_cols
         )
         
         graph_generator.generate_graph(
-            nodes=self._load_synthetic_nodes(),
+            nodes=self._load_synthetic_nodes(synth_nodes_name),
             edges=self._load_synth_walks(),
-            target_edge_count=len(self.inductiveController.data)
+            target_edge_count=self._load_edges().shape[0]
         )
            
                                                        
@@ -159,20 +159,18 @@ class Orchestrator():
         nodes = nodes.sort_values('id').set_index('id')
         return nodes
     
-    def load_normalized_embed(self):
-        embed_path = self.config_path + self.config['embed_path']
-        try:  # incase embed is stored as dict
-            node_embeddings = pickle.load(open(embed_path,"rb"))                   
-            node_embedding_df = pd.DataFrame.from_dict(node_embeddings, orient='index')
-        except:
-            node_embedding_df = pd.read_parquet(embed_path)
-            node_embedding_df = node_embedding_df.sort_values('id').set_index('id')
+    def _load_normalized_embed(self):
+        # normalize the embedding based on overall min and mx value to keep the relative distance.
+        embed = self._load_embed()
         
-        norm = np.linalg.norm(node_embedding_df, ord=np.inf, axis=1)
-        node_embedding_df.div(norm, axis=0)
-        node_embedding_df.fillna(1)
+        #normalised between 0 and 1
+        max_val = embed.max().max()
+        min_val = embed.min().min()
         
-        return node_embedding_df
+        embed_norm = embed - min_val
+        embed_norm = embed_norm / (max_val - min_val)
+
+        return embed_norm
     
     def _load_embed(self):
         embed_path = self.config_path + self.config['embed_path']
@@ -187,7 +185,10 @@ class Orchestrator():
         
     def _load_synthetic_nodes(self, name=None):
         """loads the synth node embed_ + attrib from flownet"""
-        path = self.config_path + self.config['synth_nodes']
+        if name is None:
+            path = self.config_path + self.config['synth_nodes']
+        else:
+            path = name
         
         synth_nodes = pd.read_parquet(path)
         return synth_nodes

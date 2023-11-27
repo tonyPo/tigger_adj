@@ -629,6 +629,7 @@ class FastTensorDataLoader:
 
     def __len__(self):
         return self.n_batches
+    
 
 def prepare_fast_dataloader(
     D : Dataset,
@@ -648,8 +649,9 @@ def prepare_fast_dataloader(
     else: # default label
         y = torch.from_numpy(np.zeros((X.shape[0], 1)))
     dataloader = FastTensorDataLoader(X, y, batch_size=batch_size, shuffle=(split=='train'))
-    while True:
-        yield from dataloader
+    # while True:
+    #     yield from dataloader
+    return dataloader
 
 def prepare_fast_torch_dataloader(
     D : Dataset,
