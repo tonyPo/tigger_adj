@@ -124,14 +124,13 @@ class Tab_ddpm_controller:
         )
 
         # determine number of category dimensions
-        K = np.array(self.dataset.get_category_sizes('train'))
-        if len(K) == 0:
-            K = np.array([0])
-        print(f"Category dims K: {K}")
+        num_cat = self.dataset.X_cat['train'].shape[1] if self.dataset.X_cat is not None else 0
+        print(f"Category dims K: {num_cat}")
 
         num_numerical_features = self.dataset.X_num['train'].shape[1] if self.dataset.X_num is not None else 0
-        d_in = np.sum(K) + num_numerical_features
+        d_in = num_cat + num_numerical_features
         self.model_params['d_in'] = d_in
+        self.model_params['num_classes'] = num_numerical_features
         print(f"Total number of dim in: {d_in}")
         
         print(self.model_params)
@@ -143,7 +142,7 @@ class Tab_ddpm_controller:
 
         # create diffusion model with both forward as backward 
         self.diffusion = GaussianMultinomialDiffusion(
-            num_classes=K,
+            num_classes=self.dataset.cnts_per_cat,
             num_numerical_features=num_numerical_features,
             denoise_fn=self.model,
             gaussian_loss_type=self.gaussian_loss_type,
@@ -189,7 +188,8 @@ class Tab_ddpm_controller:
         if num_numerical_features < X_gen.shape[1]:
             # use goodode funciton to map to one hot
             X_cat = X_num_[:, num_numerical_features:]
-            synth_node_cat = pd.DataFrame(X_cat)
+            cat_cols = sum(self.dataset_params['cat_cols'], [])
+            synth_node_cat = pd.DataFrame(X_cat, columns =  cat_cols)
 
         if num_numerical_features != 0:
             X_num = X_num_[:, :num_numerical_features]

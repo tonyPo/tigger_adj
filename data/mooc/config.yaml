@@ -18,6 +18,32 @@ flownet:
   verbose: 2
   # only needed when loading pretrain model
   event_dim: 7
+
+tab_ddpm:
+  ddpm_config_path: ""
+  verbose: 2
+  num_timesteps: 1000
+  gaussian_loss_type: "mse"
+  scheduler: "cosine"
+  model_type: "mlp"
+  device: "cpu"
+  batch_size: 512
+  lr: 0.005
+  weight_decay: 0.001
+  steps: 4000
+  dataset_params:
+    task_type: "binclass"
+    val_fraction: 0.1
+    cat_cols: [['cat1', 'cat2']]
+  model_params:
+    is_y_cond: false
+    # num_classes: 2
+    rtdl_params:
+      d_layers: [
+          256,
+          256
+      ]
+      dropout: 0.1
   
 torch_geo_graphsage:
   embed_path: 'embed/'
@@ -54,7 +80,7 @@ lstm:
   nb_lstm_layers: 1
   weight_decay: 0.0005
 
-
+node_synthesizer_class: "tab_ddpm"
   
 nodes_path: "mooc_nodes.parquet"
 edges_path: "mooc_edges.parquet"

@@ -72,11 +72,17 @@ class Dataset:
     def make_dataset(cls, nodes, embed, dataset_config, model_config):
         """creates a dataset from nodes and embed and split in train and validation
         """
-        num_cols = [n for n in nodes.columns if n not in dataset_config['cat_cols']]
-        X_num = nodes[num_cols].values if len(num_cols) > 0 else None
-        if embed is not None and X_num is not None:
-            X_num = np.concatenate([embed.values, X_num], axis=1) 
-        X_cat = nodes[dataset_config['cat_cols']].values  if  len(dataset_config['cat_cols']) > 0 else None
+        cat_cols = sum(dataset_config['cat_cols'], [])  # flatten list of categorical columns
+        cnts_per_cat = np.array([len(cat) for cat in dataset_config['cat_cols']])
+        num_cols = [n for n in nodes.columns if n not in cat_cols]
+        X_num = nodes[num_cols].values if len(num_cols) > 0 else np.array([])
+        num_classes = len(X_num)
+        if embed is not None:
+            if X_num.shape[0] == 0:
+                X_num = embed.values
+            else:
+                X_num = np.concatenate([embed.values, X_num], axis=1) 
+        X_cat = nodes[cat_cols].values  if  len(cat_cols) > 0 else None
         
         ixs = np.arange(nodes.shape[0])
         train_ixs, val_ixs = train_test_split(ixs, test_size=dataset_config['val_fraction'], random_state=777)
@@ -92,12 +98,13 @@ class Dataset:
             y = {},
             y_info={},
             task_type=TaskType(dataset_config['task_type']),
-            n_classes=model_config['num_classes']
+            n_classes=num_classes
         )
         
         dataset.embed_dim = embed.shape[1]
         dataset.num_cols = num_cols
         dataset.cols = nodes.columns
+        dataset.cnts_per_cat = cnts_per_cat
         
         return dataset
 

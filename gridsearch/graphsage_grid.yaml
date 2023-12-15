@@ -1,0 +1,18 @@
+trail_items_list:
+  dropout: [[0.0, 0.2]]
+
+trail_suggest_int:
+  num_layers: [1,2]
+  num_neighbors: [5,15]
+
+trail_suggest_loguniform:
+  epoch: [500, 3000]
+  lr: [0.01, 0.0001]
+  embedding_dim: [8, 64]
+
+fixed_items:
+  embed_path: 'embed/'
+  verbose: 0
+  num_test: 0.3
+  batch_size: 1024
+  

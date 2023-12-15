@@ -16,6 +16,9 @@ Based in part on: https://github.com/lucidrains/denoising-diffusion-pytorch/blob
 """
 eps = 1e-8
 
+def log_categorical(log_x_start, log_prob):
+    return (log_x_start.exp() * log_prob).sum(dim=1)
+
 def get_named_beta_schedule(schedule_name, num_diffusion_timesteps):
     """
     Get a pre-defined beta schedule for the given name.
@@ -84,16 +87,20 @@ class GaussianMultinomialDiffusion(torch.nn.Module):
                   ' This is expensive both in terms of memory and computation.')
 
         self.num_numerical_features = num_numerical_features
+        
         self.num_classes = num_classes # it as a vector [K1, K2, ..., Km]
-        self.num_classes_expanded = torch.from_numpy(
-            np.concatenate([num_classes[i].repeat(num_classes[i]) for i in range(len(num_classes))])
-        ).to(device)
+        if num_classes.shape[0]> 0:
+            self.num_classes_expanded = torch.from_numpy(
+                np.concatenate([num_classes[i].repeat(num_classes[i]) for i in range(len(num_classes))])
+            ).to(device)  # repeats the number by the number of categories
 
-        self.slices_for_classes = [np.arange(self.num_classes[0])]
-        offsets = np.cumsum(self.num_classes)
-        for i in range(1, len(offsets)):
-            self.slices_for_classes.append(np.arange(offsets[i - 1], offsets[i]))
-        self.offsets = torch.from_numpy(np.append([0], offsets)).to(device)
+            # create a list of arrays. Every array represent a categorical values with in the array listing an unique id per category
+            # for example [array([0]), array([1, 2])]
+            self.slices_for_classes = [np.arange(self.num_classes[0])]
+            offsets = np.cumsum(self.num_classes)
+            for i in range(1, len(offsets)):
+                self.slices_for_classes.append(np.arange(offsets[i - 1], offsets[i]))
+            self.offsets = torch.from_numpy(np.append([0], offsets)).to(device)
 
         self._denoise_fn = denoise_fn
         self.gaussian_loss_type = gaussian_loss_type
@@ -603,7 +610,8 @@ class GaussianMultinomialDiffusion(torch.nn.Module):
             noise = torch.randn_like(x_num)
             x_num_t = self.gaussian_q_sample(x_num, t, noise=noise)
         if x_cat.shape[1] > 0:
-            log_x_cat = index_to_log_onehot(x_cat.long(), self.num_classes)
+            log_x_cat = torch.log(x_cat.clamp(min=1e-30))
+            # log_x_cat = index_to_log_onehot(x_cat.long(), self.num_classes)
             log_x_cat_t = self.q_sample(log_x_start=log_x_cat, t=t)
         
         x_in = torch.cat([x_num_t, log_x_cat_t], dim=1)
@@ -929,7 +937,7 @@ class GaussianMultinomialDiffusion(torch.nn.Module):
         device = self.log_alpha.device
         z_norm = torch.randn((b, self.num_numerical_features), device=device)
 
-        has_cat = self.num_classes[0] != 0
+        has_cat = len(self.num_classes) > 0
         log_z = torch.zeros((b, 0), device=device).float()
         if has_cat:
             uniform_logits = torch.zeros((b, len(self.num_classes_expanded)), device=device)
@@ -959,7 +967,8 @@ class GaussianMultinomialDiffusion(torch.nn.Module):
         z_ohe = torch.exp(log_z).round()
         z_cat = log_z
         if has_cat:
-            z_cat = ohe_to_categories(z_ohe, self.num_classes)
+            # z_cat = ohe_to_categories(z_ohe, self.num_classes)
+            z_cat = z_ohe
         sample = torch.cat([z_norm, z_cat], dim=1).cpu()
         return sample, out_dict
     
