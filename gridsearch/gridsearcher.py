@@ -1,9 +1,12 @@
 #%%
 import time
 import pickle
+import optuna
+from optuna.trial import TrialState
 import numpy as np
 import networkx as nx 
 import pandas as pd
+from datetime import datetime
 
 if __name__ == "__main__":
     import os
@@ -12,16 +15,13 @@ if __name__ == "__main__":
     import yaml
     from tigger_package.orchestrator import Orchestrator
 
-
+from tigger_package.graphsage_unsup import TorchGeoGraphSageUnsup
 from tigger_package.orchestrator import Orchestrator
 from tigger_package.metrics.distribution_metrics import NodeDistributionMetrics, EdgeDistributionMetrics
 from tigger_package.tools import plot_adj_matrix, plot_hist
+from tigger_package.tab_ddpm.train_tab_ddpm import Tab_ddpm_controller
+
 #%%
-
-
-folder = "data/enron/"
-grid_file = "data/enron/grid.yaml"
-orchestrator = Orchestrator(folder)
 
 class GridSearcher:
     def __init__(self, target_class, func_param, grid_file, loss_str):
@@ -31,26 +31,119 @@ class GridSearcher:
             config_dict = yaml.safe_load(file)
         self.config = config_dict
         self.loss_str = loss_str
+        self.study = optuna.create_study(direction="minimize")
+        self.test_params = []
         
-    def objective(trial):
+        
+    def apply_grid(self, visualization=False):
+        # determin number of parallel job = cpu count - 2
+        n_jobs = os.cpu_count() - 2
+        self.study.optimize(self.objective, n_trials=self.config['n_trials'], timeout=None, n_jobs=n_jobs)
+        complete_trials = self.study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
+        
+        # save trials
+        out_path = self.config['out_path']
+        if len(out_path) > 0:
+            name = out_path + datetime.now().strftime("%Y%m%d_%H%M%S")
+            with open(name, 'wb') as handle:
+                pickle.dump(self.study, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                
+        # visualizations
+        if visualization:
+            self.visualize_study()
+            
+        return complete_trials, self.study
+    
+    def parse_trail_dict(self, param_dict, target_dict, trial):
+        for param, par_val in param_dict.items():
+            if isinstance(par_val, dict):
+                if "trial_meth" in list(par_val.keys()):
+                    # this is parameter that is tested
+                    par_val_cp = par_val.copy()
+                    trial_meth = par_val_cp.pop('trial_meth')
+                    target_dict[param] = getattr(trial, trial_meth)(param, **par_val_cp)
+                    self.test_params.append(param)
+                else:  # nested dict
+                    sub_target_dict = {}
+                    target_dict[param] = sub_target_dict
+                    self.parse_trail_dict(par_val, sub_target_dict, trial)
+            else:
+                target_dict[param] = par_val
+        
+        
+    def objective(self, trial):
+        # parse the grid search parameters
         class_dict = {}
-        # loop through grid and suggest values for trial
-        for group_name, group in self.config.item():
-            if group_name[:5] == 'trail':  # group for trail suggest
-                for k,v in group:
-                    class_dict[k] = getattr(trial, group_name[7:])(k, *v)
+        self.parse_trail_dict(self.config['trial_info'], class_dict, trial)
+            
+        #correct for num neigtbors
+        if 'num_neighbors' in class_dict.keys() :
+            class_dict['num_neighbors'] = [class_dict['num_neighbors']]*class_dict['num_layers']
+             
+        class_instance = self.target_class(
+            config_dict = class_dict,
+            **self.func_param
+        )
         
-        #add other values
-        for k,v in self.config 
+        metrics = class_instance.fit()
+        loss = sum(metrics[self.loss_str][-5:]) / 5
+        return loss
+    
+    
+    def load_study(self, name):
+        with open(name, 'rb') as handle:
+            self.study = pickle.load(handle)
+            
+    def visualize_study(self):
+        fig = optuna.visualization.plot_slice(self.study, params=self.test_params)
+        fig.show()
         
-        
-        
-def grid_search(orchestrator, func, grid_file, loss_str):
+
+def gridsearch_graphsage(folder):
+    orchestrator = Orchestrator(folder)  
+    grid_file = "gridsearch/graphsage_grid.yaml"
+    func_param = {
+        'nodes': orchestrator._load_nodes(),
+        'edges': orchestrator._load_edges(),
+        'config_path': "temp/"
+    }
+    loss_str = 'val_loss'
     
+    searcher = GridSearcher(
+        TorchGeoGraphSageUnsup,
+        func_param, 
+        grid_file, 
+        loss_str)
+    trials, study = searcher.apply_grid(visualization=True)
+    # searcher.load_study('temp/gridsearch/graphsage_erdos20231218_090525')
+    # searcher.visualize_study()
+    return searcher
+
+def gridsearch_ddpm(folder):
+    orchestrator = Orchestrator(folder)  
+    grid_file = "gridsearch/ddpm_grid.yaml"
+    func_param = {
+        'embed': orchestrator._load_normalized_embed(),
+        'nodes': orchestrator._load_nodes(),
+        'config_path': "temp/"
+    }
+    loss_str = 'val_loss'
     
+    searcher = GridSearcher(
+        Tab_ddpm_controller,
+        func_param, 
+        grid_file, 
+        loss_str)
+    trials, study = searcher.apply_grid(visualization=True)
+    return searcher
     
+  
+if __name__ == "__main__":
+    folder = "data/erdos/"
+    gridsearch_graphsage(folder)
+    # searcher = gridsearch_ddpm(folder)
     
-    
+# %%
 
 
-ans = grid_search(orchestrator, orchestrator.create_graphsage_embedding, grid_file, "val_loss"
+# %%

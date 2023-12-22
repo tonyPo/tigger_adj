@@ -1,18 +1,14 @@
-trail_items_list:
-  dropout: [[0.0, 0.2]]
-
-trail_suggest_int:
-  num_layers: [1,2]
-  num_neighbors: [5,15]
-
-trail_suggest_loguniform:
-  epoch: [500, 3000]
-  lr: [0.01, 0.0001]
-  embedding_dim: [8, 64]
-
-fixed_items:
+trial_info:
+  dropout: {'trial_meth': suggest_float, "low": 0., "high": 0.2}
+  num_layers: {'trial_meth': suggest_int, "low": 1, "high": 2}
+  num_neighbors: {'trial_meth': suggest_int, "low": 5, "high": 25}
+  epoch: {'trial_meth': suggest_int, "low": 1000, "high": 10000, "log": true}
+  embedding_dim: {'trial_meth': suggest_int, "low": 8, "high": 128, "log": true} 
+  lr: {'trial_meth': suggest_float, "low": 0.0001, "high": 0.005, "log": true}
   embed_path: 'embed/'
   verbose: 0
   num_test: 0.3
   batch_size: 1024
   
+n_trials: 200
+out_path: "temp/gridsearch/graphsage_erdos"

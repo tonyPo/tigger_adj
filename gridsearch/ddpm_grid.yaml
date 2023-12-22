@@ -1,0 +1,29 @@
+
+trial_info:
+  ddpm_config_path: ""
+  verbose: 0
+  num_timesteps: {'trial_meth': "suggest_int", "low": 1000, "high": 10000, "log": true}
+  gaussian_loss_type: "mse"
+  scheduler: "cosine"
+  model_type: "mlp"
+  device: "cpu"
+  batch_size: 1024
+  lr: {'trial_meth': "suggest_float", "low": 0.0001, "high": 0.01, "log": true}
+  weight_decay: {'trial_meth': "suggest_float", "low": 0.0001, "high": 0.01, "log": true}
+  steps: {'trial_meth': "suggest_int", "low": 200, "high": 2000, "log": true}
+  dataset_params:
+    task_type: "binclass"
+    val_fraction: 0.1
+    cat_cols: []
+    boolean_cols: []
+  model_params:
+    is_y_cond: false
+    rtdl_params:
+      d_layers: [
+          256,
+          256
+      ]
+      dropout: {'trial_meth': "suggest_float", "low": 0., "high": 0.3}
+  
+n_trials: 200
+out_path: "temp/gridsearch/ddpm_erdos"

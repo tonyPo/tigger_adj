@@ -21,7 +21,10 @@ def create_graph(node_cnt, node_att=8, edge_att=8):
     in_degree = {n: min(d, 10) for n,d in G.in_degree}
     out_degree = {n: min(d, 10) for n,d in G.out_degree}
     for i, att in enumerate(range(node_att)):
-        if i%2==0:
+        # first two variables are booleans based on whether in_degree is even
+        if i < 2:
+            values = {n:int(d%2==0) for n, d in in_degree.items()}
+        elif i%2==0:
             values = {n:random.normalvariate(d, d) for n, d in in_degree.items()}
         else:
             values = {n:random.normalvariate(d, d) for n, d in out_degree.items()}
@@ -53,12 +56,15 @@ G= create_graph(1000)
 #%% variant 2
 """variant 2 has half of the node features with a unifrom distribution regardless of the edge degree"""
 def create_graph(node_cnt, node_att=8, edge_att=8):
-    G = nx.fast_gnp_random_graph(node_cnt, p=0.1, seed=1, directed=True)
+    G = nx.fast_gnp_random_graph(node_cnt, p=0.01, seed=1, directed=True)
     random.seed(1)
     in_degree = {n: min(d, 10) for n,d in G.in_degree}
     out_degree = {n: min(d, 10) for n,d in G.out_degree}
     for i, att in enumerate(range(node_att)):
-        if i%2==0:
+        # first two variables are booleans based on whether in_degree is even
+        if i < 2:
+            values = {n:int(d%2==0) for n, d in G.in_degree}
+        elif i%2==0:
             values = {n:random.normalvariate(d, d) for n, d in in_degree.items()}
         else:
             values = {n:random.uniform(0,1) for n, d in out_degree.items()}

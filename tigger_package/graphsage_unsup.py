@@ -17,8 +17,8 @@ class TorchGeoGraphSageUnsup():
     '''Torch geometric implementation of GraphSage unsupervised.
     '''
 
-    def __init__(self, config_dict, path, nodes, edges) -> None:
-        self.config_path = path + config_dict['embed_path']
+    def __init__(self, config_dict, config_path, nodes, edges) -> None:
+        self.config_path = config_path + config_dict['embed_path']
         self.patience = 300
         for key, val in config_dict.items():
             setattr(self, key, val)
@@ -107,8 +107,9 @@ class TorchGeoGraphSageUnsup():
             self.model.eval()
             test_loss = self.dataset_epoch(self.test_loader)
             
-            print(f'\rEpoch: {epoch:03d}, Loss: {loss:.4f}, '
-                f' Test: {test_loss:.4f}', end='')
+            if self.verbose > 0:
+                print(f'\rEpoch: {epoch:03d}, Loss: {loss:.4f}, '
+                    f' Test: {test_loss:.4f}', end='')
             
             losses.append(loss)
             val_losses.append(test_loss)

@@ -19,7 +19,7 @@ class Orchestrator():
         self.config = config_dict
         self.config_path = config_path
         if self.config['node_synthesizer_class'] == 'tab_ddpm':
-            self.node_synthesizer_class = Tab_ddpm_controller 
+            self.node_synthesizer_class = Tab_ddpm_controller
         else:
             self.node_synthesizer_class = FlowNet
         
@@ -34,6 +34,8 @@ class Orchestrator():
             node = self._load_nodes()
             embed = self._load_normalized_embed()
             self.node_synthesizer = self.node_synthesizer_class(
+                embed = embed,
+                nodes = node,
                 config_path=self.config_path,
                 config_dict=self.config[self.config['node_synthesizer_class']])
             name, hist = self.node_synthesizer.train(embed, node)
@@ -64,7 +66,7 @@ class Orchestrator():
         edges =  self._load_edges()
         self.graphsage = TorchGeoGraphSageUnsup(
             config_dict = self.config['torch_geo_graphsage'],
-            path=self.config_path,
+            config_path=self.config_path,
             nodes=nodes, 
             edges=edges,
         )

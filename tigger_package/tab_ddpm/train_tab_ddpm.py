@@ -1,10 +1,17 @@
+#%%
 from copy import deepcopy
 import torch
 import numpy as np
 import pandas as pd
+if __name__ == "__main__":
+    import os
+    os.chdir('../..')
+    print(os.getcwd())
+    import yaml
 from tigger_package.tab_ddpm.gaussian_multinomial_diffusion import GaussianMultinomialDiffusion
 from tigger_package.tab_ddpm.modules import MLPDiffusion
 from tigger_package.tab_ddpm.lib import prepare_fast_dataloader, Dataset
+#%%
 
 
 class Trainer:
@@ -105,7 +112,7 @@ class Trainer:
 
 class Tab_ddpm_controller:
     """instantiates model and manages training and sampling"""
-    def __init__(self, config_path, config_dict) -> None:
+    def __init__(self, embed, nodes, config_path, config_dict) -> None:
         self.config_path = config_path + config_dict['ddpm_config_path']
         for key, val in config_dict.items():
             setattr(self, key, val)
@@ -113,12 +120,14 @@ class Tab_ddpm_controller:
         self.model = None # diffusion model reverse process
         self.diffusion = None  # diffision model forward + reverse process
         self.dataset = None  # dataset object
+        self.temp_cols = set()  # set with col id that are added for boolean cols.
+        self.nodes = self.expand_boolean_cols(nodes)
+        self.embed = embed
  
-    def train(self, embed, nodes):
-
+    def fit(self):
         self.dataset = Dataset.make_dataset(
-            nodes = nodes,
-            embed = embed,
+            nodes = self.nodes,
+            embed = self.embed,
             dataset_config = self.dataset_params,
             model_config = self.model_params,
         )
@@ -171,7 +180,7 @@ class Tab_ddpm_controller:
         # trainer.loss_history.to_csv(os.path.join(parent_dir, 'loss.csv'), index=False)
         # torch.save(diffusion._denoise_fn.state_dict(), os.path.join(parent_dir, 'model.pt'))
         # torch.save(trainer.ema_model.state_dict(), os.path.join(parent_dir, 'model_ema.pt'))
-        return ("no_model", trainer.loss_history)
+        return trainer.loss_history
 
 
     def sample_model(self, num_samples, name=None):
@@ -203,7 +212,9 @@ class Tab_ddpm_controller:
         synth_nodes = pd.concat([synth_embed, synth_node], axis=1) 
         synth_nodes = self.post_process(synth_nodes)
         synth_nodes = synth_nodes.iloc[:num_samples,:]
-        synth_nodes.to_parquet(name)     
+        synth_nodes = self.remove_temp_cols(synth_nodes)
+        synth_nodes.to_parquet(name) 
+        return synth_nodes    
 
     @staticmethod    
     def to_good_ohe(ohe, X):
@@ -238,4 +249,57 @@ class Tab_ddpm_controller:
     
     def plot_history(self, hist):
         hist[['loss', 'val_loss']].plot(logy=True)
+        
+    def expand_boolean_cols(self, nodes):
+        for col in self.dataset_params.get('boolean_cols',[]):
+            add_col_name = col + "_1"
+            self.temp_cols.add(add_col_name)  # add cols to temp list
+            self.dataset_params['cat_cols'].append([col, add_col_name])
+            nodes[add_col_name] = nodes[col] ^ 1
+        return nodes
     
+    def remove_temp_cols(self, nodes):
+        for col in self.temp_cols:
+            nodes.drop(col, axis=1, inplace=True)
+        return nodes
+            
+   
+if __name__ == "__main__":
+    node_df = pd.DataFrame([(i/10, (i+1)/10, int(i%2==0), int(i%3==0)) for i in range(100)],
+                columns=['attr1','attr2', 'attr3', 'attr4'])
+    embed_df = pd.DataFrame([(i/10, (i+1)/10) for i in range(100)],
+                columns=['emb1','emb2'])
+    
+    config_dict = yaml.safe_load('''
+        ddpm_config_path: ""
+        verbose: 2
+        num_timesteps: 10
+        gaussian_loss_type: "mse"
+        scheduler: "cosine"
+        model_type: "mlp"
+        device: "cpu"
+        batch_size: 32
+        lr: 0.01
+        weight_decay: 0.001
+        steps: 400
+        dataset_params:
+            task_type: "binclass"
+            val_fraction: 0.1
+            cat_cols: []
+            boolean_cols: ['attr3', 'attr4']
+        model_params:
+            is_y_cond: false
+            rtdl_params:
+                d_layers: [
+                    256,
+                    256
+                ]
+                dropout: 0.1
+    ''')
+    
+    ddpm = Tab_ddpm_controller(embed_df, node_df, "temp/", config_dict)
+    ddpm.fit()
+    synth_node = ddpm.sample_model(10)
+    print(synth_node)
+     
+# %%

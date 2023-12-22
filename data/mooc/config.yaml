@@ -35,6 +35,7 @@ tab_ddpm:
     task_type: "binclass"
     val_fraction: 0.1
     cat_cols: [['cat1', 'cat2']]
+    boolean_cols: []
   model_params:
     is_y_cond: false
     # num_classes: 2
