@@ -215,6 +215,6 @@ class InductiveControllerTest(unittest.TestCase):
         # self.assertAlmostEqual(np.sum(np.array(seqs['edge_attr'])), 0.3*3*10, msg="mismatch in edge_attr")
         
     def test_train_list(self):
-        res = self.inductiveController.train_model()
+        res = self.inductiveController.fit()
     
         

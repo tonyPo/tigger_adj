@@ -6,7 +6,7 @@ import numpy as np
 print(f"current idr: {os.getcwd()}")
 sys.path.append(os.getcwd())
 
-from tigger_package.variant2 import GraphSynthesizer2
+from tigger_package.mlp_edge_synthesizer import MLPEdgeSynthsizer
 from tigger_package.orchestrator import Orchestrator
 
 class Variant2(unittest.TestCase):
@@ -33,5 +33,5 @@ class Variant2(unittest.TestCase):
             weight_decay: 0.0001
             verbose: 2
         ''')
-        graphSynthesizer2 = GraphSynthesizer2(node_df, embed_df, adj_df, "", config_dict)
+        graphSynthesizer2 = MLPEdgeSynthsizer(node_df, embed_df, adj_df, "", config_dict)
         # loss_dict, epoch_loss, val_loss = graphSynthesizer2.fit()

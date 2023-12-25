@@ -244,11 +244,10 @@ class MLP(nn.Module):
 
 
 class MLPDiffusion(nn.Module):
-    def __init__(self, d_in, num_classes, is_y_cond, rtdl_params, dim_t = 128):
+    def __init__(self, d_in, num_classes, rtdl_params, dim_t = 128):
         super().__init__()
         self.dim_t = dim_t
         self.num_classes = num_classes
-        self.is_y_cond = is_y_cond
 
         # d0 = rtdl_params['d_layers'][0]
 
@@ -257,12 +256,6 @@ class MLPDiffusion(nn.Module):
 
         self.mlp = MLP.make_baseline(**rtdl_params)
 
-        # no Y conditioning in our use case
-        # if self.num_classes > 0 and is_y_cond:
-        #     self.label_emb = nn.Embedding(self.num_classes, dim_t)
-        # elif self.num_classes == 0 and is_y_cond:
-        #     self.label_emb = nn.Linear(1, dim_t)
-        
         self.proj = nn.Linear(d_in, dim_t)
         self.time_embed = nn.Sequential(
             nn.Linear(dim_t, dim_t),
@@ -272,11 +265,5 @@ class MLPDiffusion(nn.Module):
     
     def forward(self, x, timesteps, y=None):
         emb = self.time_embed(timestep_embedding(timesteps, self.dim_t))
-        # if self.is_y_cond and y is not None:
-        #     if self.num_classes > 0:
-        #         y = y.squeeze()
-        #     else:
-        #         y = y.resize(y.size(0), 1).float()
-        #     emb += F.silu(self.label_emb(y))
         x = self.proj(x) + emb
         return self.mlp(x)

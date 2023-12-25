@@ -97,7 +97,7 @@ if __name__ == "__main__":
     seqs = inductiveController.data_shuffle(seqs)
     seqs = inductiveController.get_batch(0, 6, seqs)
     
-    epoch_wise_loss, loss_dict = inductiveController.train_model()
+    epoch_wise_loss, loss_dict = inductiveController.fit()
 
 # %%
 

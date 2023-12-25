@@ -128,8 +128,7 @@ class Tab_ddpm_controller:
         self.dataset = Dataset.make_dataset(
             nodes = self.nodes,
             embed = self.embed,
-            dataset_config = self.dataset_params,
-            model_config = self.model_params,
+            dataset_config = self.dataset_params
         )
 
         # determine number of category dimensions
@@ -255,7 +254,7 @@ class Tab_ddpm_controller:
             add_col_name = col + "_1"
             self.temp_cols.add(add_col_name)  # add cols to temp list
             self.dataset_params['cat_cols'].append([col, add_col_name])
-            nodes[add_col_name] = nodes[col] ^ 1
+            nodes[add_col_name] = nodes[col].astype(int) ^ 1
         return nodes
     
     def remove_temp_cols(self, nodes):

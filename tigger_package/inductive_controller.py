@@ -381,7 +381,7 @@ class InductiveController:
             print(f"Number of parameters {num_params}")
         return (elstm, optimizer)
     
-    def train_model(self):
+    def fit(self):
         epoch_wise_loss = []
         running_loss = 0 
         val_loss_epoch = 0
@@ -517,7 +517,7 @@ class InductiveController:
         for val in vals:
             setattr(self, grid_param, val)
             self.model, self.optimizer = self.initialize_model()
-            loss_dict = self.train_model()
+            loss_dict = self.fit()
             run = {
                 'grid_param': grid_param,
                 'val': val,

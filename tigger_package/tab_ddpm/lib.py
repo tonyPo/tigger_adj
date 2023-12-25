@@ -60,7 +60,6 @@ class Dataset:
     X_cat: Optional[ArrayDict]
     y: ArrayDict
     y_info: Dict[str, Any]
-    task_type: TaskType
     n_classes: Optional[int]
     embed_dim: Optional[int] = 0
     num_cols: Optional[list[str]] = None
@@ -69,7 +68,7 @@ class Dataset:
     
 
     @classmethod
-    def make_dataset(cls, nodes, embed, dataset_config, model_config):
+    def make_dataset(cls, nodes, embed, dataset_config):
         """creates a dataset from nodes and embed and split in train and validation
         """
         cat_cols = sum(dataset_config['cat_cols'], [])  # flatten list of categorical columns
@@ -97,7 +96,6 @@ class Dataset:
             X_cat,
             y = {},
             y_info={},
-            task_type=TaskType(dataset_config['task_type']),
             n_classes=num_classes
         )
         
@@ -128,21 +126,8 @@ class Dataset:
             load('X_cat') if dir_.joinpath('X_cat_train.npy').exists() else None,
             load('y'),
             {},
-            TaskType(info['task_type']),
             info.get('n_classes'),
         )
-
-    @property
-    def is_binclass(self) -> bool:
-        return self.task_type == TaskType.BINCLASS
-
-    @property
-    def is_multiclass(self) -> bool:
-        return self.task_type == TaskType.MULTICLASS
-
-    @property
-    def is_regression(self) -> bool:
-        return self.task_type == TaskType.REGRESSION
 
     @property
     def n_num_features(self) -> int:
@@ -170,28 +155,6 @@ class Dataset:
     def get_category_sizes(self, part: str) -> List[int]:
         return [] if self.X_cat is None else get_category_sizes(self.X_cat[part])
 
-    def calculate_metrics(
-        self,
-        predictions: Dict[str, np.ndarray],
-        prediction_type: Optional[str],
-    ) -> Dict[str, Any]:
-        # metrics = {
-        #     x: calculate_metrics_(
-        #         self.y[x], predictions[x], self.task_type, prediction_type, self.y_info
-        #     )
-        #     for x in predictions
-        # }
-        metrics = {}
-        print("Metrics not yet implemented")
-        if self.task_type == TaskType.REGRESSION:
-            score_key = 'rmse'
-            score_sign = -1
-        else:
-            score_key = 'accuracy'
-            score_sign = 1
-        for part_metrics in metrics.values():
-            part_metrics['score'] = score_sign * part_metrics[score_key]
-        return metrics
 
 def change_val(dataset: Dataset, val_size: float = 0.2):
     # should be done before transformations
@@ -380,21 +343,7 @@ def cat_encode(
     return (X, True)
 
 
-def build_target(
-    y: ArrayDict, policy: Optional[YPolicy], task_type: TaskType
-) -> Tuple[ArrayDict, Dict[str, Any]]:
-    info: Dict[str, Any] = {'policy': policy}
-    if policy is None:
-        pass
-    elif policy == 'default':
-        if task_type == TaskType.REGRESSION:
-            mean, std = float(y['train'].mean()), float(y['train'].std())
-            y = {k: (v - mean) / std for k, v in y.items()}
-            info['mean'] = mean
-            info['std'] = std
-    else:
-        raise_unknown('policy', policy)
-    return y, info
+
 
 
 @dataclass(frozen=True)
@@ -406,87 +355,6 @@ class Transformations:
     cat_min_frequency: Optional[float] = None
     cat_encoding: Optional[CatEncoding] = None
     y_policy: Optional[YPolicy] = 'default'
-
-
-def transform_dataset(
-    dataset: Dataset,
-    transformations: Transformations,
-    cache_dir: Optional[Path],
-    return_transforms: bool = False
-) -> Dataset:
-    # WARNING: the order of transformations matters. Moreover, the current
-    # implementation is not ideal in that sense.
-    if cache_dir is not None:
-        transformations_md5 = hashlib.md5(
-            str(transformations).encode('utf-8')
-        ).hexdigest()
-        transformations_str = '__'.join(map(str, astuple(transformations)))
-        cache_path = (
-            cache_dir / f'cache__{transformations_str}__{transformations_md5}.pickle'
-        )
-        if cache_path.exists():
-            cache_transformations, value = load_pickle(cache_path)
-            if transformations == cache_transformations:
-                print(
-                    f"Using cached features: {cache_dir.name + '/' + cache_path.name}"
-                )
-                return value
-            else:
-                raise RuntimeError(f'Hash collision for {cache_path}')
-    else:
-        cache_path = None
-
-    if dataset.X_num is not None:
-        dataset = num_process_nans(dataset, transformations.num_nan_policy)
-
-    num_transform = None
-    cat_transform = None
-    X_num = dataset.X_num
-
-    if X_num is not None and transformations.normalization is not None:
-        X_num, num_transform = normalize(
-            X_num,
-            transformations.normalization,
-            transformations.seed,
-            return_normalizer=True
-        )
-        num_transform = num_transform
-    
-    if dataset.X_cat is None:
-        assert transformations.cat_nan_policy is None
-        assert transformations.cat_min_frequency is None
-        # assert transformations.cat_encoding is None
-        X_cat = None
-    else:
-        X_cat = cat_process_nans(dataset.X_cat, transformations.cat_nan_policy)
-        if transformations.cat_min_frequency is not None:
-            X_cat = cat_drop_rare(X_cat, transformations.cat_min_frequency)
-        X_cat, is_num, cat_transform = cat_encode(
-            X_cat,
-            transformations.cat_encoding,
-            dataset.y['train'],
-            transformations.seed,
-            return_encoder=True
-        )
-        if is_num:
-            X_num = (
-                X_cat
-                if X_num is None
-                else {x: np.hstack([X_num[x], X_cat[x]]) for x in X_num}
-            )
-            X_cat = None
-
-    y, y_info = build_target(dataset.y, transformations.y_policy, dataset.task_type)
-
-    dataset = replace(dataset, X_num=X_num, X_cat=X_cat, y=y, y_info=y_info)
-    dataset.num_transform = num_transform
-    dataset.cat_transform = cat_transform
-
-    if cache_path is not None:
-        dump_pickle((transformations, dataset), cache_path)
-    # if return_transforms:
-        # return dataset, num_transform, cat_transform
-    return dataset
 
 
 def build_dataset(

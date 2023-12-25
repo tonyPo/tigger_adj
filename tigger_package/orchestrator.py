@@ -9,7 +9,7 @@ from tigger_package.graphsage_unsup import TorchGeoGraphSageUnsup
 from tigger_package.graph_generator import GraphGenerator
 from tigger_package.flownet import FlowNet
 from tigger_package.inductive_controller import InductiveController
-from tigger_package.variant2 import GraphSynthesizer2
+from tigger_package.mlp_edge_synthesizer import MLPEdgeSynthsizer
 from tigger_package.tab_ddpm.train_tab_ddpm import Tab_ddpm_controller
 
 class Orchestrator():
@@ -38,8 +38,8 @@ class Orchestrator():
                 nodes = node,
                 config_path=self.config_path,
                 config_dict=self.config[self.config['node_synthesizer_class']])
-            name, hist = self.node_synthesizer.train(embed, node)
-        return (name, hist)
+            hist = self.node_synthesizer.fit()
+        return hist
     
     def sample_node_synthesizer(self, model_name=None):
         name = self.config_path + self.config['synth_nodes']
@@ -91,22 +91,22 @@ class Orchestrator():
     def train_lstm(self):
         if not self.lstm_controller:
             self.init_lstm()
-        loss_dict = self.lstm_controller.train_model()
+        loss_dict = self.lstm_controller.fit()
         return (loss_dict)
     
     def train_graphsyntesizer2(self):
         if not self.graphsynthesizer2:
             self.init_graphsynthesizer2()
-        loss_dict, epoch_loss, val_loss = self.graphsynthesizer2.fit()
+        loss_dict = self.graphsynthesizer2.fit()
         return loss_dict
     
-    def init_graphsynthesizer2(self):
-        self.graphsynthesizer2 = GraphSynthesizer2(
+    def init_graphsynthesizer2(self, edge_synthesizer_class=MLPEdgeSynthsizer):
+        self.graphsynthesizer2 = edge_synthesizer_class(
             self._load_nodes(),
             self._load_normalized_embed(),
             self._load_edges(),
             "",
-            self.config['GraphSynthesizer2']
+            self.config['xMLPEdgeSynthesizer']
         )
     
     def init_lstm(self):
@@ -149,7 +149,7 @@ class Orchestrator():
             target_edge_count=self._load_edges().shape[0]
         )
            
-                                                       
+                                                
     # -- private methodes
     
     def _load_edges(self):

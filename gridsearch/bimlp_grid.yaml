@@ -1,0 +1,19 @@
+trial_info:
+  synth2_path: None
+  test_fraction: 0.1
+  batch_size: 1024
+  num_clusters: {'trial_meth': suggest_int, "low": 16 , "high": 128, "log": False}
+  cluster_dim: {'trial_meth': suggest_int, "low": 16 , "high": 128, "log": False}
+   # num_epochs: {'trial_meth': suggest_int, "low": 500 , "high": 4000, "log": False}
+  epochs: 5
+  z_dim: {'trial_meth': suggest_int, "low": 16 , "high": 256, "log": False}
+  activation_function_str: {'trial_meth': suggest_categorical, "choices": ['relu', 'sigmoid'] }
+  lr: {'trial_meth': suggest_float, "low": 0.00001, "high": 0.005, "log": true} 
+  weight_decay: {'trial_meth': "suggest_float", "low": 0.000001, "high": 0.01, "log": true}
+  verbose: 0
+  kl: true
+  kl_weight: {'trial_meth': "suggest_float", "low": 0.0000000001, "high": 0.01, "log": true}
+
+
+n_trials: 2
+out_path: "temp/gridsearch/ddpm_lstm"

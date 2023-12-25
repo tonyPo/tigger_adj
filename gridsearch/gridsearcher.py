@@ -20,6 +20,9 @@ from tigger_package.orchestrator import Orchestrator
 from tigger_package.metrics.distribution_metrics import NodeDistributionMetrics, EdgeDistributionMetrics
 from tigger_package.tools import plot_adj_matrix, plot_hist
 from tigger_package.tab_ddpm.train_tab_ddpm import Tab_ddpm_controller
+from tigger_package.inductive_controller import InductiveController
+from tigger_package.mlp_edge_synthesizer import MLPEdgeSynthsizer
+from tigger_package.bimlp_edge_synthesizer import BiMLPEdgeSynthesizer
 
 #%%
 
@@ -138,10 +141,70 @@ def gridsearch_ddpm(folder):
     return searcher
     
   
+def gridsearch_lstm(folder):
+    orchestrator = Orchestrator(folder)  
+    grid_file = "gridsearch/lstm_grid.yaml"
+    func_param = {
+        'nodes': orchestrator._load_nodes(),
+        'edges':  orchestrator._load_edges(),
+        'embed': orchestrator._load_normalized_embed(),
+        'path': "temp/"        
+    }
+    loss_str = 'val_loss'
+    
+    searcher = GridSearcher(
+        InductiveController,
+        func_param, 
+        grid_file, 
+        loss_str)
+    trials, study = searcher.apply_grid(visualization=True)
+    return searcher
+
+def gridsearch_mlp(folder):
+    orchestrator = Orchestrator(folder)  
+    grid_file = "gridsearch/mlp_grid.yaml"
+    func_param = {
+        'nodes': orchestrator._load_nodes(),
+        'edges':  orchestrator._load_edges(),
+        'embed': orchestrator._load_normalized_embed(),
+        'config_path': "temp/"        
+    }
+    loss_str = 'val_loss'
+    
+    searcher = GridSearcher(
+        MLPEdgeSynthsizer,
+        func_param, 
+        grid_file, 
+        loss_str)
+    trials, study = searcher.apply_grid(visualization=True)
+    return searcher
+
+def gridsearch_bimlp(folder):
+    orchestrator = Orchestrator(folder)  
+    grid_file = "gridsearch/bimlp_grid.yaml"
+    func_param = {
+        'nodes': orchestrator._load_nodes(),
+        'edges':  orchestrator._load_edges(),
+        'embed': orchestrator._load_normalized_embed(),
+        'config_path': "temp/"        
+    }
+    loss_str = 'val_loss'
+    
+    searcher = GridSearcher(
+        BiMLPEdgeSynthesizer,
+        func_param, 
+        grid_file, 
+        loss_str)
+    trials, study = searcher.apply_grid(visualization=True)
+    return searcher
+      
 if __name__ == "__main__":
     folder = "data/erdos/"
-    gridsearch_graphsage(folder)
+    # gridsearch_graphsage(folder)
     # searcher = gridsearch_ddpm(folder)
+    searcher = gridsearch_lstm(folder)
+    # searcher = gridsearch_mlp(folder)
+    # searcher = gridsearch_bimlp(folder)
     
 # %%
 
