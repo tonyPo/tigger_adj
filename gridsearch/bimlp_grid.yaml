@@ -13,7 +13,8 @@ trial_info:
   verbose: 0
   kl: true
   kl_weight: {'trial_meth': "suggest_float", "low": 0.0000000001, "high": 0.01, "log": true}
+  seed: 1
 
 
-n_trials: 2
-out_path: "temp/gridsearch/ddpm_lstm"
+n_trials: 50
+out_path: "temp/gridsearch/bimlp_erdos"

@@ -43,7 +43,7 @@ class InductiveController:
                 
         self.gpu_num = -1
         self.device = torch.device("cpu") #self.get_device()
-        random.seed(1)
+        random.seed(self.seed)
 
         #prep data
         self.data = edges
@@ -370,7 +370,8 @@ class InductiveController:
             device=self.device,
             kl_weight=self.kl_weight,
             num_components=self.num_clusters + 2,  #incl padding + end cluster
-            dropout = self.dropout
+            dropout = self.dropout,
+            seed = self.seed
         )
         elstm = elstm.to(self.device)
         

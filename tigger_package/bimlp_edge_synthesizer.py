@@ -25,12 +25,13 @@ class BiMLPEdgeSynthesizer(nn.Module):
     It uses and MLP to predict both the embedding of adjacent nodes connected with an outoging edge
     as well as adjacent nodes connected with an incoming edge
     '''
-    def __init__(self, nodes, embed, edges, config_path, config_dict):
+    def __init__(self, nodes, embed, edges, path, config_dict):
         super(BiMLPEdgeSynthesizer, self).__init__()
-        self.config_path = config_path + config_dict['synth2_path']
+        self.config_path = path + config_dict['synth2_path']
         for key, val in config_dict.items():
             setattr(self, key, val)
         self.device = 'cpu'  
+        torch.manual_seed(self.seed)
         self.nodes = nodes
         self.embed = embed
         self.embed_nodes = torch.tensor(np.concatenate([embed, nodes], axis=1)).float()

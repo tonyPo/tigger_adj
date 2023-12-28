@@ -139,7 +139,7 @@ class EdgeDistributionMetrics:
         ax2.set_title("out degree dist")
         fig.show()
         
-    def widgets_distr(self):
+    def widgets_distr(self, show_plot=True):
         assert self.temp_dir is not None, "temp dir is not set"
         assert self.gtrie_dir is not None, "gtrie dir is not set"
         dfs = {}
@@ -169,20 +169,41 @@ class EdgeDistributionMetrics:
         df['delta'] = np.absolute(df['edges_frac'] - df['synth_edges_frac'])
         
         #plot results
-        plt.style.use('seaborn-v0_8')
-        fig, ax = plt.subplots(1, 1)
-        
-        x_axis = np.arange(df.shape[0])
-                           
-        ax.bar(x_axis - 0.2, df.edges_frac, width=0.4, label='orig', )
-        ax.bar(x_axis + 0.2, df.synth_edges_frac, width=0.4, label='synth')
-        ax.legend()
-        ax.set_xticks(np.arange(0, df.shape[0]))
-        ax.set_xticklabels(df['Subgraph.1'], rotation=90)
-        
-        fig.show()
+        if show_plot:
+            plt.style.use('seaborn-v0_8')
+            fig, ax = plt.subplots(1, 1)
+            
+            x_axis = np.arange(df.shape[0])
+                            
+            ax.bar(x_axis - 0.2, df.edges_frac, width=0.4, label='orig', )
+            ax.bar(x_axis + 0.2, df.synth_edges_frac, width=0.4, label='synth')
+            ax.legend()
+            ax.set_xticks(np.arange(0, df.shape[0]))
+            ax.set_xticklabels(df['Subgraph.1'], rotation=90)
+            
+            fig.show()
 
         return (df, df.delta.mean())
+    
+    def widgets_distr_table(self):
+        df, _mean_delta = self.widgets_distr(show_plot=False)
+        df_orig = df[['Subgraph.1', 'edges_frac']].rename(columns={'edges_frac': 'value'})
+        df_orig.index = "ORIGINAL_" + df_orig['Subgraph.1']
+
+        df_synth = df[['Subgraph.1', 'synth_edges_frac']].rename(columns={'synth_edges_frac': 'value'})
+        df_synth.index = "SYNTH_" + df_synth['Subgraph.1']
+
+        df_delta = df[['Subgraph.1', 'delta']].rename(columns={'delta': 'value'})
+        df_delta.index = "DELTA_" + df_delta['Subgraph.1']
+
+
+        df = pd.concat([df_orig, df_synth, df_delta], axis=0)
+        df.drop("Subgraph.1", axis=1, inplace=True)
+        df.loc["mean_delta_widget", "value"] = _mean_delta
+        df['type'] = "widget_count"
+        df['metric'] = "fraction"
+        return df
+
         
     def clustering_coef_undirected(self):
         """calculates the global clustering coef"""
@@ -259,3 +280,27 @@ class EdgeDistributionMetrics:
             text_file.write(adj_str)
         return input_file
         
+def compare_metrics(nodes, edges, synth_nodes, synth_edges, name):
+    ndm = NodeDistributionMetrics(nodes, synth_nodes)
+    node_metric_df = ndm.calculate_wasserstein_distance()
+    
+    # edge atributes
+    edm = EdgeDistributionMetrics(edges, synth_edges)
+    edge_metrec_df = edm.calculate_wasserstein_distance()
+    
+    degree_metric_df = edm.get_degree_wasserstein_distance()
+    widget_df = edm.widgets_distr_table()
+    cc_df = edm.clustering_coef_undirected()
+    
+    results = pd.concat([node_metric_df,edge_metrec_df,degree_metric_df, cc_df, widget_df], axis=0)
+    results.loc["edge_count",:] = {'value': synth_edges.shape[0], 'type': 'edge_cnt', 'metric': 'count'}
+    results.loc["orig_edge_count",:] = {'value': edges.shape[0], 'type': 'edge_cnt', 'metric': 'count'}
+    results.loc["node_count",:] = {'value': synth_nodes.shape[0], 'type': 'edge_cnt', 'metric': 'count'}
+    results.loc["orig_node_count",:] = {'value': nodes.shape[0], 'type': 'edge_cnt', 'metric': 'count'}
+    
+    results = results.reset_index(names='name')
+    results = results.rename(columns={"value": name})
+    
+    
+    return results
+

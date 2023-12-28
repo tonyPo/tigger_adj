@@ -17,8 +17,9 @@ import torch.nn.functional as nnf
 class EdgeNodeLSTM(nn.Module):
     def __init__(self, vocab, gnn_dim, nb_layers, num_components, edge_attr_dim,
                  node_attr_dim, nb_lstm_units=100, clust_dim=3, mu_hidden_dim=100,
-                 batch_size=3, kl_weight=0.001, device='cpu', dropout=0):
+                 batch_size=3, kl_weight=0.001, device='cpu', dropout=0, seed=1):
         super(EdgeNodeLSTM, self).__init__()
+        torch.manual_seed(seed)
         self.vocab = vocab
         self.nb_lstm_layers = nb_layers  # number of LSTM layers
         self.nb_lstm_units = nb_lstm_units  # dimension of hidden layer h

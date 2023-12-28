@@ -10,6 +10,7 @@ from tigger_package.graph_generator import GraphGenerator
 from tigger_package.flownet import FlowNet
 from tigger_package.inductive_controller import InductiveController
 from tigger_package.mlp_edge_synthesizer import MLPEdgeSynthsizer
+from tigger_package.bimlp_edge_synthesizer import BiMLPEdgeSynthesizer
 from tigger_package.tab_ddpm.train_tab_ddpm import Tab_ddpm_controller
 
 class Orchestrator():
@@ -26,7 +27,7 @@ class Orchestrator():
         self.node_synthesizer = None
         self.graphsage = None
         self.lstm_controller = None
-        self.graphsynthesizer2 = None
+        self.graphsynthesizer = None
         
     
     def train_node_synthesizer(self):
@@ -94,32 +95,46 @@ class Orchestrator():
         loss_dict = self.lstm_controller.fit()
         return (loss_dict)
     
-    def train_graphsyntesizer2(self):
-        if not self.graphsynthesizer2:
-            self.init_graphsynthesizer2()
-        loss_dict = self.graphsynthesizer2.fit()
+    def train_graphsyntesizer(self):
+        if not self.graphsynthesizer:
+            self.init_graphsynthesizer()
+        loss_dict = self.graphsynthesizer.fit()
         return loss_dict
     
-    def init_graphsynthesizer2(self, edge_synthesizer_class=MLPEdgeSynthsizer):
-        self.graphsynthesizer2 = edge_synthesizer_class(
-            self._load_nodes(),
-            self._load_normalized_embed(),
-            self._load_edges(),
-            "",
-            self.config['xMLPEdgeSynthesizer']
+    def init_graphsynthesizer(self, edge_synthesizer= 'MLP', seed=None):
+        if edge_synthesizer == 'MLP':
+            edge_synthesizer_class = MLPEdgeSynthsizer
+            config_dict = self.config['MLPEdgeSynthesizer']
+        elif edge_synthesizer == 'LSTM':
+            edge_synthesizer_class = InductiveController
+            config_dict = self.config['lstm']
+        else:
+            edge_synthesizer_class = BiMLPEdgeSynthesizer
+            config_dict = self.config['BIMLPEdgeSynthesizer']
+        
+        #set seed
+        if seed is not None:
+            config_dict['seed'] = seed
+            
+        self.graphsynthesizer = edge_synthesizer_class(
+            nodes=self._load_nodes(),
+            embed=self._load_normalized_embed(),
+            edges=self._load_edges(),
+            path="",
+            config_dict=config_dict
         )
     
-    def init_lstm(self):
-        nodes = self._load_nodes()
-        edges =  self._load_edges()
-        embed = self._load_normalized_embed()
-        self.lstm_controller = InductiveController(
-            nodes=nodes,
-            edges=edges,
-            embed=embed,
-            path=self.config_path,
-            config_dict=self.config['lstm']
-        )
+    # def init_lstm(self):
+    #     nodes = self._load_nodes()
+    #     edges =  self._load_edges()
+    #     embed = self._load_normalized_embed()
+    #     self.lstm_controller = InductiveController(
+    #         nodes=nodes,
+    #         edges=edges,
+    #         embed=embed,
+    #         path=self.config_path,
+    #         config_dict=self.config['lstm']
+    #     )
        
     def lin_grid_search_lstm(self, grid_dict):
         if not self.lstm_controller:
