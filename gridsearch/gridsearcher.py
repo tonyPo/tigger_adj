@@ -40,7 +40,7 @@ class GridSearcher:
         
     def apply_grid(self, visualization=False):
         # determin number of parallel job = cpu count - 2
-        n_jobs = 3 #os.cpu_count() - 3
+        n_jobs = 2 #os.cpu_count() - 3
         self.study.optimize(self.objective, n_trials=self.config['n_trials'], timeout=None, n_jobs=n_jobs)
         complete_trials = self.study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
         
