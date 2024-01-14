@@ -1,9 +1,15 @@
+#%%
 import pickle
 import os
 import pandas as pd
 import numpy as np
 import yaml
 import tensorflow as tf
+if __name__ == "__main__":
+    import os
+    os.chdir('..')
+    print(os.getcwd())
+    import yaml
 from sklearn.preprocessing import MinMaxScaler
 from tigger_package.graphsage_unsup import TorchGeoGraphSageUnsup
 from tigger_package.graph_generator import GraphGenerator
@@ -12,6 +18,8 @@ from tigger_package.inductive_controller import InductiveController
 from tigger_package.mlp_edge_synthesizer import MLPEdgeSynthsizer
 from tigger_package.bimlp_edge_synthesizer import BiMLPEdgeSynthesizer
 from tigger_package.tab_ddpm.train_tab_ddpm import Tab_ddpm_controller
+from tigger_package.label_transfer import LabelTransferrer
+#%%
 
 class Orchestrator():
     def __init__(self, config_path):
@@ -28,6 +36,7 @@ class Orchestrator():
         self.graphsage = None
         self.lstm_controller = None
         self.graphsynthesizer = None
+        self.spark = None
         
     
     def train_node_synthesizer(self):
@@ -72,7 +81,7 @@ class Orchestrator():
             edges=edges,
         )
         train_metrics = self.graphsage.fit()
-        self.graphsage.get_embedding(nodes, edges)        
+        self.graphsage.get_embedding(nodes, edges)  
         return train_metrics
         
         
@@ -123,18 +132,6 @@ class Orchestrator():
             path="",
             config_dict=config_dict
         )
-    
-    # def init_lstm(self):
-    #     nodes = self._load_nodes()
-    #     edges =  self._load_edges()
-    #     embed = self._load_normalized_embed()
-    #     self.lstm_controller = InductiveController(
-    #         nodes=nodes,
-    #         edges=edges,
-    #         embed=embed,
-    #         path=self.config_path,
-    #         config_dict=self.config['lstm']
-    #     )
        
     def lin_grid_search_lstm(self, grid_dict):
         if not self.lstm_controller:
@@ -164,16 +161,48 @@ class Orchestrator():
             target_edge_count=self._load_edges().shape[0]
         )
            
+    def transfer_labels(self, spark=None):
+        if spark is None:
+            self.spark = self._init_spark()
+            
+        #update dict
+        self.config['transfer']['label_col'] = self.config['label_col']
+        synth_edges = (self._load_synth_graph_edges()
+                       .rename(columns={'src': 'start', 'dst': 'end'})
+        )
+        
+        lt = LabelTransferrer(
+            nodes=self._load_nodes(incl_label_col=True), 
+            edges=self._load_edges(), 
+            synth_nodes=self._load_synth_graph_nodes(),
+            synth_edges=synth_edges,
+            config_dict=self.config['transfer'],
+            config_path=self.config_path,
+            spark=self.spark)
+        nodes_path, edges_path = lt.transfer()
+        self.spark.stop()
+        return (nodes_path, edges_path)
                                                 
     # -- private methodes
+    
+    def _init_spark(self):
+        from pyspark import SparkContext, SparkConf
+        from pyspark.sql import SparkSession
+        conf = SparkConf().setAppName('appName').setMaster('local')
+        sc = SparkContext(conf=conf)
+        spark = SparkSession(sc)
+        return spark
     
     def _load_edges(self):
         return pd.read_parquet(self.config_path + self.config['edges_path'])  
 
-    def _load_nodes(self):
+    def _load_nodes(self, incl_label_col=False):
         # assume id column
         nodes = pd.read_parquet(self.config_path + self.config['nodes_path'])  
         nodes = nodes.sort_values('id').set_index('id')
+        
+        if not incl_label_col and self.config.get('label_col') is not None:
+            nodes = nodes.drop(columns=self.config.get('label_col'))
         return nodes
     
     def _load_normalized_embed(self):
@@ -222,6 +251,26 @@ class Orchestrator():
     
     def _load_synth_graph_edges(self):
         path = self.config_path + self.config['synth_graph_dir'] + 'adjacency.parquet'  
-        return pd.read_parquet(path)
+        synth_edges = pd.read_parquet(path)
+        float32_cols = list(synth_edges.select_dtypes(include='float32'))
+        synth_edges[float32_cols] = synth_edges[float32_cols].astype('float64')
+        return synth_edges
     
+    def _load_synth_graph_nodes(self):
+        path = self.config_path + self.config['synth_graph_dir'] + 'node_attributes.parquet'  
+        synth_nodes = pd.read_parquet(path)
+        synth_nodes.index.rename("id", inplace=True)
+        float32_cols = list(synth_nodes.select_dtypes(include='float32'))
+        synth_nodes[float32_cols] = synth_nodes[float32_cols].astype('float64')
+        return synth_nodes
         
+    
+ 
+if __name__ == "__main__":
+    folder = "data/enron/"
+    orchestrator = Orchestrator(folder)
+    # nodes=orchestrator._load_nodes(incl_label_col=True)
+    # synth_nodes=orchestrator._load_synth_graph_nodes()
+    orchestrator.transfer_labels()
+    
+#%%       

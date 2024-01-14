@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 if __name__ == "__main__":
     import os
-    os.chdir('../..')
+    os.chdir('..')
     print(os.getcwd())
     import yaml
 from tigger_package.tab_ddpm.gaussian_multinomial_diffusion import GaussianMultinomialDiffusion
@@ -212,7 +212,10 @@ class Tab_ddpm_controller:
         synth_nodes = self.post_process(synth_nodes)
         synth_nodes = synth_nodes.iloc[:num_samples,:]
         synth_nodes = self.remove_temp_cols(synth_nodes)
+        synth_nodes = synth_nodes.reset_index(drop=True)
         synth_nodes.to_parquet(name) 
+        print()
+        print(f"there are {synth_nodes.shape[0]} nodes sampled")
         return synth_nodes    
 
     @staticmethod    

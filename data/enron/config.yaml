@@ -21,50 +21,107 @@ flownet:
   
 torch_geo_graphsage:
   embed_path: 'embed/'
-  embedding_dim: 64
-   #20000  # epoch for training
+  embedding_dim: 32
   epoch: 3000
   lr: 0.001
   batch_size: 36
   num_layers: 2
   verbose: 2
-  num_neighbors: [10, 10]
-  dropout: 0.1
-  num_test: 0.3
+  num_neighbors: [24, 24]
+  dropout: 0.05
+  num_test: 0.2
 
 lstm:
-  n_walks: 10000
+  n_walks: 8000
   test_n_walks: 100
   batch_size: 50
-  num_clusters: 16
-  cluster_emb_dim: 4
+  num_clusters: 5
+  cluster_emb_dim: 9
   mu_hidden_dim: 64
-  l_w: 12
-  num_epochs: 400
+  l_w: 27
+  num_epochs: 750
   minimum_walk_length: 2
   verbose: 1
-  pca_components: 8
+  pca_components: 31
   config_path: "lstm_model/"
-  lr: 0.0001
-  kl_weight: 0.001
-  dropout: 0.1
-  nb_lstm_layers: 1
-  weight_decay: 0.0005
+  lr: 0.00002
+  kl_weight: 0.0001
+  dropout: 0.23
+  nb_lstm_layers: 2
+  weight_decay: 0.00001
+  seed: 1
 
-GraphSynthesizer2:
+MLPEdgeSynthesizer:
   synth2_path: None
-  test_fraction: 0.3
-  batch_size: 128
-  num_clusters: 12
-  cluster_dim: 3
-  epochs: 5000
+  test_fraction: 0.1
+  batch_size: 32
+  num_clusters: 4
+  cluster_dim: 9
+  epochs: 775
   z_dim: 128
-  activation_function_str: 'relu'
-  lr: 0.004
+  activation_function_str: 'sigmoid'
+  lr: 0.0003
   weight_decay: 0.0001
+  kl: false
+  kl_weight: 0.000001
   verbose: 2
+  seed: 1
+
+BIMLPEdgeSynthesizer:
+  synth2_path: None
+  test_fraction: 0.1
+  batch_size: 32
+  num_clusters: 4
+  cluster_dim: 13
+  epochs: 375
+  z_dim: 128
+  activation_function_str: 'sigmoid'
+  lr: 0.003
+  weight_decay: 0.00003
+  kl_weight: 0.0002
+  verbose: 1
+  seed: 1
+  kl: True
+
+tab_ddpm:
+  ddpm_config_path: ""
+  verbose: 2
+  num_timesteps: 2500
+  gaussian_loss_type: "mse"
+  scheduler: "cosine"
+  model_type: "mlp"
+  device: "cpu"
+  batch_size: 36
+  lr: 0.0038
+  weight_decay: 0.00001
+  steps: 231688
+  dataset_params:
+    val_fraction: 0.1
+    cat_cols: []
+    boolean_cols: []
+  model_params:
+    rtdl_params:
+      d_layers: [
+          256,
+          256
+      ]
+      dropout: 0.03
+
+transfer:
+  weight_col: 'weight'
+  support_size: [10, 10]
+  dims: [2, 24,24,24]
+  batch_size: 30
+  hub0_dim: 24
+  seed: 1
+  learning_rate: 0.0002
+  usebn: true
+  verbose: 2
+  epochs: 10
 
 
+node_synthesizer_class: "tab_ddpm"
+label_col: 'label'
   
 nodes_path: "enron_nodes.parquet"
 edges_path: "enron_edges.parquet"

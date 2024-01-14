@@ -12,6 +12,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+if __name__ == "__main__":
+    import os
+    os.chdir('..')
+    print(os.getcwd())
+    import yaml
+    from tigger_package.orchestrator import Orchestrator
+    
+#%%
+
 
 class TorchGeoGraphSageUnsup():
     '''Torch geometric implementation of GraphSage unsupervised.
@@ -198,6 +207,12 @@ class TorchGeoGraphSageUnsup():
 
         plt.legend(bbox_to_anchor=(1.10, 1))
         plt.show()
+        
+        
+if __name__ == "__main__":
+    folder = "data/enron/"
+    orchestrator = Orchestrator(folder)
+    orchestrator.create_graphsage_embedding()
 # %%
 
 

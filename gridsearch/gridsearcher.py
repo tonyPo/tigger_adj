@@ -1,5 +1,6 @@
 #%%
 import time
+import yaml
 import pickle
 import optuna
 from optuna.trial import TrialState
@@ -12,7 +13,6 @@ if __name__ == "__main__":
     import os
     os.chdir('..')
     print(os.getcwd())
-    import yaml
     from tigger_package.orchestrator import Orchestrator
 
 from tigger_package.graphsage_unsup import TorchGeoGraphSageUnsup
@@ -40,7 +40,7 @@ class GridSearcher:
         
     def apply_grid(self, visualization=False):
         # determin number of parallel job = cpu count - 2
-        n_jobs = 2 #os.cpu_count() - 3
+        n_jobs = 5 #os.cpu_count() - 3
         self.study.optimize(self.objective, n_trials=self.config['n_trials'], timeout=None, n_jobs=n_jobs)
         complete_trials = self.study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
         
@@ -199,11 +199,11 @@ def gridsearch_bimlp(folder):
     return searcher
       
 if __name__ == "__main__":
-    folder = "data/erdos/"
-    # gridsearch_graphsage(folder)
-    # searcher = gridsearch_ddpm(folder)
+    folder = "data/enron/"
+    # searcher = gridsearch_graphsage(folder)
+    searcher = gridsearch_ddpm(folder)
     # searcher = gridsearch_lstm(folder)
     # searcher = gridsearch_mlp(folder)
-    searcher = gridsearch_bimlp(folder)
+    # searcher = gridsearch_bimlp(folder)
     
 # %%

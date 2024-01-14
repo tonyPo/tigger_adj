@@ -25,7 +25,9 @@ import tigger_package
 
 # graph = pickle.load(open(enron_folder + enron_graph_file, "rb"))
 # nodes, edges = nx_to_df(graph)
-# nodes = nodes.drop(['label', 'old_id'], axis=1)
+# nodes = nodes.drop(['old_id'], axis=1)
+# nodes.loc[nodes["label"]=='executive vp','label'] = 1
+# nodes.loc[nodes["label"]!=1,'label'].count()
 # edges.rename({'source': "start", 'target': "end"}, inplace=True, axis=1)
 # nodes.to_parquet(enron_folder + node_file)
 # edges.to_parquet(enron_folder + edge_file)

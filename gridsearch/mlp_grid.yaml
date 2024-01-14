@@ -1,9 +1,9 @@
 trial_info:
   synth2_path: None
   test_fraction: 0.1
-  batch_size: 1024
-  num_clusters: {'trial_meth': suggest_int, "low": 16 , "high": 128, "log": False}
-  cluster_dim: {'trial_meth': suggest_int, "low": 16 , "high": 128, "log": False}
+  batch_size: 32
+  num_clusters: {'trial_meth': suggest_int, "low": 4 , "high": 32, "log": False}
+  cluster_dim: {'trial_meth': suggest_int, "low": 2 , "high": 16, "log": False}
   epochs: {'trial_meth': suggest_int, "low": 100 , "high": 1000, "log": False}
   # epochs: 5
   z_dim: {'trial_meth': suggest_int, "low": 16 , "high": 256, "log": False}
@@ -17,4 +17,4 @@ trial_info:
 
 
 n_trials: 50
-out_path: "temp/gridsearch/ddpm_lstm"
+out_path: "temp/gridsearch/enron_mlp"

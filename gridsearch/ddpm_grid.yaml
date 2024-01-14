@@ -9,7 +9,7 @@ trial_info:
   device: "cpu"
   batch_size: 1024
   lr: {'trial_meth': "suggest_float", "low": 0.0001, "high": 0.01, "log": true}
-  weight_decay: {'trial_meth': "suggest_float", "low": 0.000001, "high": 0.0001, "log": true}
+  weight_decay: {'trial_meth': "suggest_float", "low": 0.000001, "high": 0.001, "log": true}
   steps: {'trial_meth': "suggest_int", "low": 1000, "high": 400000, "log": true}
   dataset_params:
     val_fraction: 0.1
@@ -23,5 +23,5 @@ trial_info:
       ]
       dropout: {'trial_meth': "suggest_float", "low": 0., "high": 0.3}
   
-n_trials: 200
-out_path: "temp/gridsearch/ddpm_erdos"
+n_trials: 100
+out_path: "temp/gridsearch/ddpm_ENRON"

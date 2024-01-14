@@ -376,7 +376,7 @@ class BiMLPEdgeSynthesizer(nn.Module):
         while len(res) < target_cnt:
             for node_batch in node_loader:
                 embed_node = synth_nodes[node_batch,:]
-                clusters = torch.tensor(self.cluster_model.predict(embed_node[:,:self.embed.shape[1]])).to(self.device)
+                clusters = torch.tensor(self.cluster_model.predict(embed_node[:,:self.embed.shape[1]].numpy())).to(self.device)
                 next_outg = self.forward(embed_node, clusters, direction='out')
                 adj_outg = self.map_to_nodes(searcher, next_outg[0], next_outg[1])
                 edge_outg = next_outg[2].detach().numpy()
