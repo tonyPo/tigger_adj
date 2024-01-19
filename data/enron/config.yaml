@@ -127,6 +127,7 @@ edge_cat_transformer:
 node_synthesizer_class: "tab_ddpm"
 label_col: 'label'
   
+base_path: "data/enron/"
 nodes_path: "enron_nodes.parquet"
 edges_path: "enron_edges.parquet"
 embed_path: "embed/embedding.parquet"

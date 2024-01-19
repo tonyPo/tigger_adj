@@ -27,7 +27,7 @@ class Orchestrator():
         with open(config_path + "config.yaml", 'r') as file:
             config_dict = yaml.safe_load(file)
         self.config = config_dict
-        self.config_path = config_path
+        self.config_path = config_dict['base_path']
         if self.config['node_synthesizer_class'] == 'tab_ddpm':
             self.node_synthesizer_class = Tab_ddpm_controller
         else:
