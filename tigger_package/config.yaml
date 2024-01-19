@@ -1,0 +1,137 @@
+# ENRON CONFIG FILE
+
+flownet:
+  overwrite: True
+  flownet_config_path: 'flowmodel/'
+
+  # model structure
+  activation: 'sigmoid'
+  hidden_units: [32,32]
+  number_of_bijectors: 12
+  # training params
+  epoch: 3000
+  learning_rate: 0.001
+  batch_size: 36 
+
+  # print freq of loss during training
+  n_disp: 20
+  verbose: 2
+  # only needed when loading pretrain model
+  event_dim: 37
+  
+torch_geo_graphsage:
+  embed_path: 'embed/'
+  embedding_dim: 8
+  epoch: 4000
+  lr: 0.001
+  batch_size: 36
+  num_layers: 2
+  verbose: 2
+  num_neighbors: [24, 24]
+  dropout: 0.05
+  num_test: 0.1
+
+lstm:
+  n_walks: 8000
+  test_n_walks: 100
+  batch_size: 50
+  num_clusters: 3
+  cluster_emb_dim: 3
+  mu_hidden_dim: 64
+  l_w: 27
+  num_epochs: 750
+  minimum_walk_length: 2
+  verbose: 1
+  pca_components: 8
+  config_path: "lstm_model/"
+  lr: 0.00002
+  kl_weight: 0.0001
+  dropout: 0.23
+  nb_lstm_layers: 2
+  weight_decay: 0.00001
+  seed: 1
+
+MLPEdgeSynthesizer:
+  synth2_path: None
+  test_fraction: 0.1
+  batch_size: 32
+  num_clusters: 3
+  cluster_dim: 3
+  epochs: 775
+  z_dim: 128
+  activation_function_str: 'sigmoid'
+  lr: 0.0003
+  weight_decay: 0.0001
+  kl: false
+  kl_weight: 0.000001
+  verbose: 2
+  seed: 1
+
+BIMLPEdgeSynthesizer:
+  synth2_path: None
+  test_fraction: 0.1
+  batch_size: 32
+  num_clusters: 3
+  cluster_dim: 3
+  epochs: 375
+  z_dim: 128
+  activation_function_str: 'sigmoid'
+  lr: 0.003
+  weight_decay: 0.00003
+  kl_weight: 0.0002
+  verbose: 1
+  seed: 1
+  kl: True
+
+tab_ddpm:
+  ddpm_config_path: ""
+  verbose: 2
+  num_timesteps: 2500
+  gaussian_loss_type: "mse"
+  scheduler: "cosine"
+  model_type: "mlp"
+  device: "cpu"
+  batch_size: 36
+  lr: 0.0038
+  weight_decay: 0.00001
+  steps: 250000
+  dataset_params:
+    val_fraction: 0.1
+    cat_cols: []
+    boolean_cols: []
+  model_params:
+    rtdl_params:
+      d_layers: [
+          256,
+          256
+      ]
+      dropout: 0.03
+
+transfer:
+  weight_col: 'weight'
+  support_size: [10, 10]
+  dims: [2, 24,24,24]
+  batch_size: 30
+  hub0_dim: 24
+  seed: 1
+  learning_rate: 0.0002
+  usebn: true
+  verbose: 2
+  epochs: 10
+
+edge_cat_transformer:
+  bin_cols: []
+  cat_cols: []
+
+
+node_synthesizer_class: "tab_ddpm"
+label_col: 'label'
+  
+nodes_path: "enron_nodes.parquet"
+edges_path: "enron_edges.parquet"
+embed_path: "embed/embedding.parquet"
+synth_walks: "synth_walks.pickle"
+synth_nodes: "synth_nodes.parquet"
+synth_graph_dir: "synth_graph/"
+target_node_count: 150
+  
