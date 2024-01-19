@@ -19,6 +19,7 @@ from tigger_package.mlp_edge_synthesizer import MLPEdgeSynthsizer
 from tigger_package.bimlp_edge_synthesizer import BiMLPEdgeSynthesizer
 from tigger_package.tab_ddpm.train_tab_ddpm import Tab_ddpm_controller
 from tigger_package.label_transfer import LabelTransferrer
+from tigger_package.edge_cat_transformer import EdgeCategoricalTransformer
 #%%
 
 class Orchestrator():
@@ -160,6 +161,11 @@ class Orchestrator():
             edges=self._load_synth_walks(),
             target_edge_count=self._load_edges().shape[0]
         )
+        
+        synth_edges = self._load_synth_graph_edges()
+        config_path = self.config_path + self.config['synth_graph_dir']
+        edgeCategoricalTransformer = EdgeCategoricalTransformer(synth_edges, self.config['edge_cat_transformer'], config_path)
+        edgeCategoricalTransformer.transform()
            
     def transfer_labels(self, spark=None):
         if spark is None:
@@ -267,10 +273,10 @@ class Orchestrator():
     
  
 if __name__ == "__main__":
-    folder = "data/enron/"
+    folder = "data/erdos/"
     orchestrator = Orchestrator(folder)
     # nodes=orchestrator._load_nodes(incl_label_col=True)
     # synth_nodes=orchestrator._load_synth_graph_nodes()
-    orchestrator.transfer_labels()
+    edges = orchestrator._load_edges()
     
 #%%       

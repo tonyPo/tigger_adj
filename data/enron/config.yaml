@@ -21,28 +21,28 @@ flownet:
   
 torch_geo_graphsage:
   embed_path: 'embed/'
-  embedding_dim: 32
-  epoch: 3000
+  embedding_dim: 8
+  epoch: 4000
   lr: 0.001
   batch_size: 36
   num_layers: 2
   verbose: 2
   num_neighbors: [24, 24]
   dropout: 0.05
-  num_test: 0.2
+  num_test: 0.1
 
 lstm:
   n_walks: 8000
   test_n_walks: 100
   batch_size: 50
-  num_clusters: 5
-  cluster_emb_dim: 9
+  num_clusters: 3
+  cluster_emb_dim: 3
   mu_hidden_dim: 64
   l_w: 27
   num_epochs: 750
   minimum_walk_length: 2
   verbose: 1
-  pca_components: 31
+  pca_components: 8
   config_path: "lstm_model/"
   lr: 0.00002
   kl_weight: 0.0001
@@ -55,8 +55,8 @@ MLPEdgeSynthesizer:
   synth2_path: None
   test_fraction: 0.1
   batch_size: 32
-  num_clusters: 4
-  cluster_dim: 9
+  num_clusters: 3
+  cluster_dim: 3
   epochs: 775
   z_dim: 128
   activation_function_str: 'sigmoid'
@@ -71,8 +71,8 @@ BIMLPEdgeSynthesizer:
   synth2_path: None
   test_fraction: 0.1
   batch_size: 32
-  num_clusters: 4
-  cluster_dim: 13
+  num_clusters: 3
+  cluster_dim: 3
   epochs: 375
   z_dim: 128
   activation_function_str: 'sigmoid'
@@ -94,7 +94,7 @@ tab_ddpm:
   batch_size: 36
   lr: 0.0038
   weight_decay: 0.00001
-  steps: 231688
+  steps: 250000
   dataset_params:
     val_fraction: 0.1
     cat_cols: []
@@ -118,6 +118,10 @@ transfer:
   usebn: true
   verbose: 2
   epochs: 10
+
+edge_cat_transformer:
+  bin_cols: []
+  cat_cols: []
 
 
 node_synthesizer_class: "tab_ddpm"
