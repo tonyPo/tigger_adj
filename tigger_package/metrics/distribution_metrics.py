@@ -48,7 +48,8 @@ class NodeDistributionMetrics:
         for i, col in enumerate(cols):
             ax = fig.add_subplot(vert_plots, horz_plots, i+1)
             ax.hist(self.nodes[col].values, bins=20, color='green', label='orig', alpha=0.5)
-            ax.hist(self.synth_nodes[col].values, bins=20, color='red', label='synth', alpha=0.5)
+            if self.synth_nodes is not None:
+                ax.hist(self.synth_nodes[col].values, bins=20, color='red', label='synth', alpha=0.5)
             if i==cnt-1:
                 ax.legend(bbox_to_anchor=(1.3, 1.))
                 
@@ -84,11 +85,18 @@ class EdgeDistributionMetrics:
         return ws_df
             
     def plot_hist(self):
-        plot_hist(self.edges.drop(['start', 'end'], axis=1), self.synth_edges.drop(['src', 'dst'], axis=1))
+        if self.synth_edges is None:
+            plot_hist(self.edges.drop(['start', 'end'], axis=1), None)
+        else:
+            plot_hist(self.edges.drop(['start', 'end'], axis=1), self.synth_edges.drop(['src', 'dst'], axis=1))
                 
     def get_degrees_dist(self):
+        datasets = [('edges', {"src": 'start', 'dst': 'end'})]
+        if self.synth_edges is not None:
+            datasets.append(('synth_edges', {"src": 'src', 'dst': 'dst'}))
+
         if not self.edges_degree:
-            for edge_name, name_dict in [('edges', {"src": 'start', 'dst': 'end'}), ('synth_edges', {"src": 'src', 'dst': 'dst'})]:
+            for edge_name, name_dict in datasets:
                 edges = getattr(self, edge_name)
                 out_degree = edges[name_dict['src']].value_counts(sort=False).value_counts(sort=False)
                 in_degree = edges[name_dict['dst']].value_counts(sort=False).value_counts(sort=False)
@@ -116,22 +124,30 @@ class EdgeDistributionMetrics:
         self.get_degrees_dist()
         orig_in = self.edges_degree['in_degree']
         orig_out= self.edges_degree['out_degree']
-        synth_in = self.synth_edges_degree['in_degree']
-        synth_out = self.synth_edges_degree['out_degree']
+        if self.synth_edges is not None:
+            synth_in = self.synth_edges_degree['in_degree']
+            synth_out = self.synth_edges_degree['out_degree']
         
         # calculate bins
-        out_max = max(np.max(orig_out.keys()), np.max(synth_out.keys()))
+        if self.synth_edges is not None:
+            out_max = max(np.max(orig_out.keys()), np.max(synth_out.keys()))
+            in_max =max(np.max(orig_in.keys()), np.max(synth_in.keys()))
+        else:
+            out_max = np.max(orig_out.keys())
+            in_max = np.max(orig_in.keys())
+
         out_bins = [i* math.ceil(out_max/20) for i in range(20)]
-        in_max =max(np.max(orig_in.keys()), np.max(synth_in.keys()))
+        
         in_bins = [i* math.ceil(in_max/20) for i in range(20)]
         
-        plt.style.use('seaborn-v0_8')
+        plt.style.use('seaborn')
         fig, (ax1, ax2) = plt.subplots(1, 2)
         
         ax1.hist(orig_in.index, weights=orig_in.values, bins=in_bins, alpha=0.5, label='orig', density=True, edgecolor='black')
-        ax1.hist(synth_in.index, weights=synth_in.values, bins=in_bins, alpha=0.5, label='synth', density=True, edgecolor='black')
         ax2.hist(orig_out.index, weights=orig_out.values, bins=out_bins, alpha=0.5, label='orig', density=True, edgecolor='black')
-        ax2.hist(synth_out.index, weights=synth_out.values, bins=out_bins, alpha=0.5, label='synth', density=True, edgecolor='black')
+        if self.synth_edges is not None:
+            ax1.hist(synth_in.index, weights=synth_in.values, bins=in_bins, alpha=0.5, label='synth', density=True, edgecolor='black')
+            ax2.hist(synth_out.index, weights=synth_out.values, bins=out_bins, alpha=0.5, label='synth', density=True, edgecolor='black')
         
         ax1.legend()
         ax1.set_title("in degree dist")
@@ -143,7 +159,10 @@ class EdgeDistributionMetrics:
         assert self.temp_dir is not None, "temp dir is not set"
         assert self.gtrie_dir is not None, "gtrie dir is not set"
         dfs = {}
-        names = ['edges', 'synth_edges']
+        if self.synth_edges is None:
+            names = ['edges']
+        else:
+            names = ['edges', 'synth_edges']
         
         for name in names:
             input_file = self.adj_to_csv(name)
@@ -153,6 +172,7 @@ class EdgeDistributionMetrics:
             output = f"-o {self.temp_dir}dir3_{name}.html "
    
             with open(self.temp_dir+"console_output_"+name, 'w') as fp:
+                print(gtrie_cmd + input + output)
                 proc_res = subprocess.run(gtrie_cmd + input + output, shell=True, stdout=fp, stderr=fp)
                 if proc_res.returncode < 0:
                     raise Exception("Terminal process did not exit succesfully")
@@ -162,6 +182,9 @@ class EdgeDistributionMetrics:
             df[name+"_frac"] = df['Org. Frequency'] / df['Org. Frequency'].sum()
             df = df.rename({'Org. Frequency': name+"_freq"}, axis=1)
             dfs[name] = df
+
+        if self.synth_edges is None:
+            return dfs['edges']
             
         df = dfs['edges'].merge(dfs['synth_edges'], on='Subgraph.1', how='outer')
         

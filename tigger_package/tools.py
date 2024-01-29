@@ -30,8 +30,14 @@ def plot_adj_matrix(adj_df):
     plt.show()
 
 def plot_hist(x_data, embed, start=0, end=-1, min_x=None, max_x=None):
+    if embed is None:
+        show_embed = False
+        embed = x_data
+    else:
+        show_embed = True
+
     fig = plt.figure(figsize=(20,20))
-    dim = embed.shape[1]
+    dim = x_data.shape[1]
     rows = math.ceil(len(range(dim)[start:end])/2)
     
     #set labels
@@ -39,6 +45,8 @@ def plot_hist(x_data, embed, start=0, end=-1, min_x=None, max_x=None):
         x_label = x_data.name
     else:
         x_label = 'orig'
+
+  
     if hasattr(embed, 'name'):
         embed_label = embed.name
     else:
@@ -56,7 +64,8 @@ def plot_hist(x_data, embed, start=0, end=-1, min_x=None, max_x=None):
             max_val = max_x
         bins = np.linspace(min_val, max_val, 20)
         ax = fig.add_subplot(rows,2, i+1-start)
-        ax.hist(embed.iloc[:, i], bins=bins, alpha=0.5, color='g', label=embed_label)
+        if show_embed:
+            ax.hist(embed.iloc[:, i], bins=bins, alpha=0.5, color='g', label=embed_label)
         ax.hist(x_data.iloc[:, i], bins=bins, alpha=0.5, color='r', label=x_label)
 
     plt.legend()

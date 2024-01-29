@@ -23,5 +23,5 @@ trial_info:
       ]
       dropout: {'trial_meth': "suggest_float", "low": 0., "high": 0.3}
   
-n_trials: 100
-out_path: "temp/gridsearch/ddpm_ENRON"
+n_trials: 10
+out_path: "/dbfs/mnt/dseedsi/users/ton/synth_graphs/gridsearch/reddit/ddpm_reddit"

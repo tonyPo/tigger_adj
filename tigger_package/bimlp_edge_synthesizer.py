@@ -25,29 +25,26 @@ class BiMLPEdgeSynthesizer(nn.Module):
     It uses and MLP to predict both the embedding of adjacent nodes connected with an outoging edge
     as well as adjacent nodes connected with an incoming edge
     '''
-    def __init__(self, nodes, embed, edges, path, config_dict):
+    def __init__(self, nodes, embed, edges, path, config_dict, device='cpu'):
         super(BiMLPEdgeSynthesizer, self).__init__()
         self.config_path = path + config_dict['synth2_path']
         for key, val in config_dict.items():
             setattr(self, key, val)
-        self.device = 'cpu'  
+        self.device = device  
         torch.manual_seed(self.seed)
         self.nodes = nodes
         self.embed = embed
         self.embed_nodes = torch.tensor(np.concatenate([embed, nodes], axis=1)).float()
         self.cluster_model = self.init_cluster_model()
-        self.cluster_labels = torch.tensor(self.cluster_model.labels_).type(torch.long).to(self.device)
+        self.cluster_labels = torch.tensor(self.cluster_model.labels_).type(torch.long)
         
         edges_ext = self.add_end_nodes(edges)
-        self.edges = torch.tensor(edges_ext).float().to(self.device)
+        self.edges = torch.tensor(edges_ext).float()
         
         self.act_funct = self.set_activation_function(self.activation_function_str)
         self.seed = 4
         self.init_model()
         self.optimizer = torch.optim.Adagrad(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        
-        #set data to device
-        self.embed_nodes = self.embed_nodes.to(self.device)
         
     @staticmethod  
     def format_edges(edges):
@@ -63,14 +60,14 @@ class BiMLPEdgeSynthesizer(nn.Module):
         """
         
         input_ids = edge_batch[:,0].int()
-        input = self.embed_nodes[input_ids]
-        input_cluster = self.cluster_labels[input_ids]
+        input = self.embed_nodes[input_ids].to(self.device)
+        input_cluster = self.cluster_labels[input_ids].to(self.device)
         
         output_ids = edge_batch[:,1].int()
-        output = self.embed_nodes[output_ids]
-        output_cluster = self.cluster_labels[output_ids]
+        output = self.embed_nodes[output_ids].to(self.device)
+        output_cluster = self.cluster_labels[output_ids].to(self.device)
         
-        edge_attr = edge_batch[:, 2:]
+        edge_attr = edge_batch[:, 2:].to(self.device)
         
         return (input, input_cluster, edge_attr), (output, output_cluster, edge_attr)
     
@@ -365,8 +362,8 @@ class BiMLPEdgeSynthesizer(nn.Module):
        
     def create_synthetic_walks(self, synth_nodes_df, target_cnt, map_real_time=False):
         """creates a list of tuples. Every tuple has (start_id, end_id, list(edge_attr))"""
-        node_ids = torch.tensor(synth_nodes_df.index.values).int().to(self.device)
-        synth_nodes = torch.tensor(synth_nodes_df.values).float().to(self.device)
+        node_ids = torch.tensor(synth_nodes_df.index.values).int()
+        synth_nodes = torch.tensor(synth_nodes_df.values).float()
         searcher = BallTree(synth_nodes, leaf_size=40)
         node_loader = DataLoader(node_ids, batch_size=self.batch_size, shuffle=True)
         self.eval()
@@ -376,15 +373,15 @@ class BiMLPEdgeSynthesizer(nn.Module):
         while len(res) < target_cnt:
             for node_batch in node_loader:
                 embed_node = synth_nodes[node_batch,:]
-                clusters = torch.tensor(self.cluster_model.predict(embed_node[:,:self.embed.shape[1]].numpy())).to(self.device)
-                next_outg = self.forward(embed_node, clusters, direction='out')
-                adj_outg = self.map_to_nodes(searcher, next_outg[0], next_outg[1])
-                edge_outg = next_outg[2].detach().numpy()
+                clusters = torch.tensor(self.cluster_model.predict(embed_node[:,:self.embed.shape[1]].numpy()))
+                next_outg = self.forward(embed_node.to(self.device), clusters.to(self.device), direction='out')
+                adj_outg = self.map_to_nodes(searcher, next_outg[0].to('cpu'), next_outg[1].to('cpu'))
+                edge_outg = next_outg[2].to('cpu').detach().numpy()
                 res = res + [(s,e,list(a)) for s,e,a in zip(node_batch.detach().numpy(), adj_outg, edge_outg) if s!=end_id and e!=end_id]
                 
-                next_inc = self.forward(embed_node, clusters, direction='in')
-                adj_inc = self.map_to_nodes(searcher, next_inc[0], next_inc[1])
-                edge_inc = next_inc[2].detach().numpy()
+                next_inc = self.forward(embed_node.to(self.device), clusters.to(self.device), direction='in')
+                adj_inc = self.map_to_nodes(searcher, next_inc[0].to('cpu'), next_inc[1].to('cpu'))
+                edge_inc = next_inc[2].to('cpu').detach().numpy()
                 res = res + [(s,e,list(a)) for e,s,a in zip(node_batch.detach().numpy(), adj_inc, edge_inc) if s!=end_id and e!=end_id]               
         return res[:target_cnt]
                 

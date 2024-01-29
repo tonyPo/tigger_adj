@@ -149,8 +149,9 @@ class TorchGeoGraphSageUnsup():
         data = self.init_dataset(nodes, edges)
         # might need to add a loader for big dataset
         embed = self.model(data.x, data.edge_index)
-        df = pd.DataFrame(embed.numpy())
+        df = pd.DataFrame(embed.cpu().numpy())
         df = df.reset_index(names='id')
+        df.columns = df.columns.map(str)
         df.to_parquet(self.config_path + 'embedding.parquet')
         
     def lin_grid_search(self, grid_dict, nodes, edges):

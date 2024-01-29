@@ -15,7 +15,7 @@ from tigger_package.tab_ddpm.lib import prepare_fast_dataloader, Dataset
 
 
 class Trainer:
-    def __init__(self, diffusion, train_iter, lr, weight_decay, steps, device=torch.device('cuda:1'),
+    def __init__(self, diffusion, train_iter, lr, weight_decay, steps, device=torch.device('cuda'),
                  valiation_iter=None):
         self.diffusion = diffusion
         self.ema_model = deepcopy(self.diffusion._denoise_fn)
@@ -213,6 +213,7 @@ class Tab_ddpm_controller:
         synth_nodes = synth_nodes.iloc[:num_samples,:]
         synth_nodes = self.remove_temp_cols(synth_nodes)
         synth_nodes = synth_nodes.reset_index(drop=True)
+        synth_nodes.columns = synth_nodes.columns.map(str)
         synth_nodes.to_parquet(name) 
         print()
         print(f"there are {synth_nodes.shape[0]} nodes sampled")

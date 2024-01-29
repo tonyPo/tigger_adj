@@ -40,7 +40,7 @@ class GridSearcher:
         
     def apply_grid(self, visualization=False):
         # determin number of parallel job = cpu count - 2
-        n_jobs = 5 #os.cpu_count() - 3
+        n_jobs = 1 #os.cpu_count() - 3
         self.study.optimize(self.objective, n_trials=self.config['n_trials'], timeout=None, n_jobs=n_jobs)
         complete_trials = self.study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
         
@@ -148,7 +148,8 @@ def gridsearch_lstm(folder):
         'nodes': orchestrator._load_nodes(),
         'edges':  orchestrator._load_edges(),
         'embed': orchestrator._load_normalized_embed(),
-        'path': "temp/"        
+        'path': "temp/",
+        'device': orchestrator.device        
     }
     loss_str = 'val_loss'
     
@@ -167,7 +168,8 @@ def gridsearch_mlp(folder):
         'nodes': orchestrator._load_nodes(),
         'edges':  orchestrator._load_edges(),
         'embed': orchestrator._load_normalized_embed(),
-        'path': "temp/"        
+        'path': "temp/", 
+        'device': orchestrator.device       
     }
     loss_str = 'val_loss'
     
@@ -186,7 +188,8 @@ def gridsearch_bimlp(folder):
         'nodes': orchestrator._load_nodes(),
         'edges':  orchestrator._load_edges(),
         'embed': orchestrator._load_normalized_embed(),
-        'path': "temp/"        
+        'path': "temp/",
+        'device': orchestrator.device         
     }
     loss_str = 'val_loss'
     

@@ -1,10 +1,10 @@
 trial_info:
   synth2_path: None
   test_fraction: 0.1
-  batch_size: 32
+  batch_size: 1024
   num_clusters: {'trial_meth': suggest_int, "low": 4 , "high": 32, "log": False}
   cluster_dim: {'trial_meth': suggest_int, "low": 2 , "high": 16, "log": False}
-  epochs: {'trial_meth': suggest_int, "low": 100 , "high": 1000, "log": False}
+  epochs: {'trial_meth': suggest_int, "low": 100 , "high": 700, "log": False}
   # epochs: 5
   z_dim: {'trial_meth': suggest_int, "low": 16 , "high": 256, "log": False}
   activation_function_str: {'trial_meth': suggest_categorical, "choices": ['relu', 'sigmoid'] }
@@ -16,5 +16,5 @@ trial_info:
   seed: 1
 
 
-n_trials: 50
-out_path: "temp/gridsearch/enron_mlp"
+n_trials: 10
+out_path: "/dbfs/mnt/dseedsi/users/ton/synth_graphs/gridsearch/reddit/mlp_reddit"

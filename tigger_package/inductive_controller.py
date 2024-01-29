@@ -32,7 +32,7 @@ print("loaded")
 #%%
 ## !! vocab and node id is mixed, need to merge them
 class InductiveController:
-    def __init__(self, nodes, edges, embed, path, config_dict):
+    def __init__(self, nodes, edges, embed, path, config_dict, device='cpu'):
         for key, val in config_dict.items():
             setattr(self, key, val)
                  
@@ -42,7 +42,7 @@ class InductiveController:
         os.makedirs(self.model_dir, exist_ok=True)
                 
         self.gpu_num = -1
-        self.device = torch.device("cpu") #self.get_device()
+        self.device = torch.device(device) #self.get_device()
         random.seed(self.seed)
 
         #prep data

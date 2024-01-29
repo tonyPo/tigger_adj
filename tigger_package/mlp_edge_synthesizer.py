@@ -20,29 +20,27 @@ if __name__ == "__main__":
 
 class MLPEdgeSynthsizer(nn.Module):
     
-    def __init__(self, nodes, embed, edges, path, config_dict):
+    def __init__(self, nodes, embed, edges, path, config_dict, device='cpu'):
         super(MLPEdgeSynthsizer, self).__init__()
         self.config_path = path + config_dict['synth2_path']
         for key, val in config_dict.items():
             setattr(self, key, val)
-        self.device = 'cpu'
+        self.device = device
         torch.manual_seed(self.seed)    
         self.nodes = nodes
         self.embed = embed
         self.embed_nodes = torch.tensor(np.concatenate([embed, nodes], axis=1)).float()
         self.cluster_model = self.init_cluster_model()
-        self.cluster_labels = torch.tensor(self.cluster_model.labels_).type(torch.long).to(self.device)
+        self.cluster_labels = torch.tensor(self.cluster_model.labels_).type(torch.long)
         
         edges_ext = self.add_end_nodes(edges)
-        self.edges = torch.tensor(edges_ext).float().to(self.device)
+        self.edges = torch.tensor(edges_ext).float()
         
         self.act_funct = self.set_activation_function(self.activation_function_str)
         self.seed = 4
         self.init_model()
         self.optimizer = torch.optim.Adagrad(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         
-        #set data to device
-        self.embed_nodes = self.embed_nodes.to(self.device)
         
     @staticmethod  
     def format_edges(edges):
@@ -68,7 +66,7 @@ class MLPEdgeSynthsizer(nn.Module):
         )
         # add end node to cluster
         self.cluster_labels = torch.cat(
-            [self.cluster_labels, torch.tensor([self.num_clusters], dtype=torch.long)], dim=0
+            [self.cluster_labels.to('cpu'), torch.tensor([self.num_clusters], dtype=torch.long)], dim=0
         )
         self.num_clusters = self.num_clusters + 1
         
@@ -87,14 +85,14 @@ class MLPEdgeSynthsizer(nn.Module):
         """
         
         input_ids = edge_batch[:,0].int()
-        input = self.embed_nodes[input_ids]
-        input_cluster = self.cluster_labels[input_ids]
+        input = self.embed_nodes[input_ids].to(self.device)
+        input_cluster = self.cluster_labels[input_ids].to(self.device)
         
         output_ids = edge_batch[:,1].int()
-        output = self.embed_nodes[output_ids]
-        output_cluster = self.cluster_labels[output_ids]
+        output = self.embed_nodes[output_ids].to(self.device)
+        output_cluster = self.cluster_labels[output_ids].to(self.device)
         
-        edge_attr = edge_batch[:, 2:]
+        edge_attr = edge_batch[:, 2:].to(self.device)
         
         return (input, input_cluster), (output, output_cluster, edge_attr)
     
@@ -120,6 +118,7 @@ class MLPEdgeSynthsizer(nn.Module):
             for batch in train_loader:
                 self.train()  # set training flag
                 input_batch, output_batch = self.prep_batch(batch)
+
                 #forward pass
                 output_hat = self.forward(*input_batch, output_batch[1])
                 loss, log_dict = self.calculate_loss(output_batch, output_hat)
@@ -196,7 +195,7 @@ class MLPEdgeSynthsizer(nn.Module):
         y_clusterid_sampled = y_clusterid_hat.unsqueeze(-1).repeat(1,self.z_dim).unsqueeze(2)  #add dim for cluster_id
         mu = torch.gather(z_mu, 2, y_clusterid_sampled).squeeze(2) 
         std_logits = torch.gather(z_std_logits, 2, y_clusterid_sampled).squeeze(2)
-        # std_logits = torch.maximum(std_logits, torch.tensor(-20).to(self.device))  # avoid too small number that resolve to zero.
+        
         
         std = torch.exp(std_logits)  # determine std for hidden layer z to gnn
         q = torch.distributions.Normal(mu, std)  # create distribution layer
@@ -311,8 +310,8 @@ class MLPEdgeSynthsizer(nn.Module):
        
     def create_synthetic_walks(self, synth_nodes_df, target_cnt, map_real_time=False):
         """creates a list of tuples. Every tuple has (start_id, end_id, list(edge_attr))"""
-        node_ids = torch.tensor(synth_nodes_df.index.values).int().to(self.device)
-        synth_nodes = torch.tensor(synth_nodes_df.values).float().to(self.device)
+        node_ids = torch.tensor(synth_nodes_df.index.values).int()
+        synth_nodes = torch.tensor(synth_nodes_df.values).float()
         searcher = BallTree(synth_nodes, leaf_size=40)
         node_loader = DataLoader(node_ids, batch_size=self.batch_size, shuffle=True)
         self.eval()
@@ -321,11 +320,12 @@ class MLPEdgeSynthsizer(nn.Module):
         
         while len(res) < target_cnt:
             for node_batch in node_loader:
+                node_batch = node_batch
                 embed_node = synth_nodes[node_batch,:]
-                clusters = torch.tensor(self.cluster_model.predict(embed_node)).to(self.device)
-                output = self.forward(embed_node, clusters)
-                end = self.map_to_nodes(searcher, output[0], output[1])
-                edge_attr = output[2].detach().numpy()
+                clusters = torch.tensor(self.cluster_model.predict(embed_node))
+                output = self.forward(embed_node.to(self.device), clusters.to(self.device))
+                end = self.map_to_nodes(searcher, output[0].to('cpu'), output[1].to('cpu'))
+                edge_attr = output[2].to('cpu').detach().numpy()
                 res = res + [(s,e,list(a)) for s,e,a in zip(node_batch.detach().numpy(), end, edge_attr) if e!=end_id]
 
         return res

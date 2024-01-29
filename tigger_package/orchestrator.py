@@ -13,9 +13,16 @@ if __name__ == "__main__":
 from sklearn.preprocessing import MinMaxScaler
 from tigger_package.graphsage_unsup import TorchGeoGraphSageUnsup
 from tigger_package.graph_generator import GraphGenerator
-from tigger_package.flownet import FlowNet
+# from tigger_package.flownet import FlowNet
 from tigger_package.inductive_controller import InductiveController
+
+import importlib
+import tigger_package.mlp_edge_synthesizer
+importlib.reload(tigger_package.mlp_edge_synthesizer)
 from tigger_package.mlp_edge_synthesizer import MLPEdgeSynthsizer
+
+import tigger_package.bimlp_edge_synthesizer
+importlib.reload(tigger_package.bimlp_edge_synthesizer)
 from tigger_package.bimlp_edge_synthesizer import BiMLPEdgeSynthesizer
 from tigger_package.tab_ddpm.train_tab_ddpm import Tab_ddpm_controller
 from tigger_package.label_transfer import LabelTransferrer
@@ -38,18 +45,18 @@ class Orchestrator():
         self.lstm_controller = None
         self.graphsynthesizer = None
         self.spark = None
+        self.device = config_dict.get("device", "/CPU:0")
         
     
     def train_node_synthesizer(self):
-        with tf.device('/CPU:0'):
-            node = self._load_nodes()
-            embed = self._load_normalized_embed()
-            self.node_synthesizer = self.node_synthesizer_class(
-                embed = embed,
-                nodes = node,
-                config_path=self.config_path,
-                config_dict=self.config[self.config['node_synthesizer_class']])
-            hist = self.node_synthesizer.fit()
+        node = self._load_nodes()
+        embed = self._load_normalized_embed()
+        self.node_synthesizer = self.node_synthesizer_class(
+            embed = embed,
+            nodes = node,
+            config_path=self.config_path,
+            config_dict=self.config[self.config['node_synthesizer_class']])
+        hist = self.node_synthesizer.fit()
         return hist
     
     def sample_node_synthesizer(self, model_name=None):
@@ -131,7 +138,8 @@ class Orchestrator():
             embed=self._load_normalized_embed(),
             edges=self._load_edges(),
             path="",
-            config_dict=config_dict
+            config_dict=config_dict,
+            device=self.device
         )
        
     def lin_grid_search_lstm(self, grid_dict):
