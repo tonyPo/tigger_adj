@@ -1,5 +1,6 @@
 #%%
 import os
+import sys
 import pickle
 import importlib
 import random
@@ -15,10 +16,17 @@ import numpy as np
 import copy
 import torch
 import torch.optim as optim
+if __name__ == "__main__":
+    import time
+    import os
+    os.chdir('..')
+    print(os.getcwd())
+    from tigger_package.orchestrator import Orchestrator
 from tigger_package.utils import prepare_sample_probs, Edge, Node
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.neighbors import BallTree
+from sklearn.model_selection import train_test_split
 import tigger_package.edge_node_lstm
 importlib.reload(tigger_package.edge_node_lstm)
 from tigger_package.edge_node_lstm import EdgeNodeLSTM
@@ -26,6 +34,8 @@ try:
     import matplotlib.pyplot as plt
 except:
     pass
+
+   
 # import scann
 print("loaded")
 
@@ -55,6 +65,17 @@ class InductiveController:
         self.node_embedding_matrix = self.create_node_embedding_matrix_from_dict(embed)
         self.cluster_labels, self.kmeans, self.pca = self.reduce_embedding_dim_and_cluster()
         self.define_sample_with_prob_per_edge()
+        self.train_edges, self.test_edges = self.train_test_split()
+        
+        if self.verbose >=2:
+            print(f"Size of nodes: {sys.getsizeof(nodes)/(1024*1024)} MB")
+            print(f"Size of edges: {sys.getsizeof(edges)/(1024*1024)} MB")
+            print(f"Size of embed: {sys.getsizeof(embed)/(1024*1024)} MB")
+            print(f"Size of edges Object: {sys.getsizeof(self.edges)/(1024*1024)} MB")
+            print(f"Size of node_id_to_object: {sys.getsizeof(self.node_id_to_object)/(1024*1024)} MB")
+            print(f"Size of vocab: {sys.getsizeof(self.vocab)/(1024*1024)} MB")
+            print(f"Size of node_features: {sys.getsizeof(self.node_features)/(1024*1024)} MB")
+            print(f"Size of node_embedding_matrix: {sys.getsizeof(self.node_embedding_matrix)/(1024*1024)} MB")
         
         #prep model
         self.model, self.optimizer = self.initialize_model()
@@ -99,6 +120,14 @@ class InductiveController:
             node_id_to_object[end].as_end_node.append(edge)      # add edge to end node list.
         return (edges, node_id_to_object)
         
+    def train_test_split(self):
+        """splits the edges into a train and test set
+        The test size is based on the ratie of the walk counts with a minimum of 10%"""
+
+        test_frac = max(0.1, self.test_n_walks / (self.test_n_walks + self.n_walks))
+        X_train, X_test = train_test_split(self.edges, test_size=test_frac, random_state=self.seed)
+        return X_train, X_test
+    
     def define_sample_with_prob_per_edge(self):
         """Adds a list of connected edges to each edge object together with the 
         probability"""
@@ -128,29 +157,20 @@ class InductiveController:
                   
         return vocab
         
-    def sample_random_Walks(self, train=True):
+    def sample_random_Walks(self, n_walks, edges):
         """Create n_walk number of random walks"""
-        if self.verbose >= 2:
-            print(f"Running Random Walk on {len(self.edges)} edges")
         random_walks = []
-        n_walks = self.n_walks if train else self.test_n_walks
-        for edge in tqdm(random.choices(self.edges, k=n_walks)):
+        for edge in random.choices(edges, k=n_walks):
             rw = self.run_random_walk(edge)
             if rw is not None:
                 random_walks.append(rw)
-            
-        if self.verbose >= 2:
-            print(f"collected {len(random_walks)} random walks")
-            print("Average length of random walks")
-            lengths = []
-            for wk in random_walks:
-                lengths.append(len(wk))
-            print(f"Mean length {np.mean(lengths):.02f} and Std deviation {np.std(lengths):.02f}")
-            plt.hist(lengths)
-            # plt.xscale("log")
-            plt.title("histogram of random walk lengths")
-            plt.show()
-
+        
+        # in case some edge results in None:
+        while len(random_walks) < n_walks:
+            edge = random.choice(edges)
+            rw = self.run_random_walk(edge)
+            if rw is not None:
+                random_walks.append(rw)
         return random_walks
 
     def run_random_walk(self, edge):
@@ -295,7 +315,7 @@ class InductiveController:
            
         return res_dict
 
-    def get_batch(self, start_index, batch_size, seqs):
+    def get_batch(self, seqs):
         """Creates padded batch copied to the torch device
         seqs is a dict containing :
         seq_edge, seq_X, X_lengths, seq_CID"""
@@ -306,14 +326,14 @@ class InductiveController:
         # copy relevant part of seq into batch dic and create padding matrices
         for k,seq in seqs.items():
             if k == 'x_length':
-                x_length = seqs['x_length'][start_index:start_index+batch_size]
+                x_length = seqs['x_length']
             else:
-                batch_seq[k] = seq[start_index:start_index+batch_size]
+                batch_seq[k] = seq
                 if type(seq[0][0])==list:
                     dim = len(seq[0][0])
-                    padding_shape = (batch_size, self.l_w+1, dim)
+                    padding_shape = (self.batch_size, self.l_w+1, dim)
                 else:
-                    padding_shape = (batch_size, self.l_w+1)
+                    padding_shape = (self.batch_size, self.l_w+1)
                 pad_batch_seq[k] = np.ones(padding_shape, dtype=np.float64) * pad_value
                
         
@@ -386,11 +406,6 @@ class InductiveController:
         epoch_wise_loss = []
         running_loss = 0 
         val_loss_epoch = 0
-        seqs = self.sample_random_Walks()
-        seqs = self.get_X_Y_from_sequences(seqs)
-        
-        test_seqs = self.sample_random_Walks(train=False)
-        test_seqs = self.get_X_Y_from_sequences(test_seqs)
         
         loss_dict = {
                 'loss': [],
@@ -406,12 +421,13 @@ class InductiveController:
            
         for epoch in range(self.num_epochs):
             self.model.train()
-            seqs = self.data_shuffle(seqs)  # shuffle data
-            n_seqs = len(seqs['x_length'])  # number of walks
-            
-            for start_index in range(0, n_seqs-self.batch_size+1, self.batch_size):              
-                batch_cnt = 0  # Batch number in Epoch
-                x_batch, y_batch = self.get_batch(start_index, self.batch_size, seqs)
+            batch_cnt = math.ceil(self.n_walks / self.batch_size)
+  
+            for batch_id in range(batch_cnt): 
+                seqs = self.sample_random_Walks(self.batch_size, self.train_edges)
+                seqs = self.get_X_Y_from_sequences(seqs)          
+                x_batch, y_batch = self.get_batch(seqs)
+
                 self.model.zero_grad()
                 
                 # forward + backward pas
@@ -426,9 +442,7 @@ class InductiveController:
                 for k in loss_dict.keys():
                     loss_dict[k].append(log_dict[k])
     
-                batch_cnt += 1
-                
-                print(f"\r {int(start_index)} / {n_seqs}, epoch:{epoch} loss={running_loss}, val_loss: {val_loss_epoch}",end="")
+                print(f"\r Batch {int(batch_id)} / {batch_cnt}, epoch:{epoch}/ {self.num_epochs} loss={running_loss}, val_loss: {val_loss_epoch}",end="")
      
             running_loss = np.mean(loss_dict['loss'][-batch_cnt:])
             epoch_wise_loss.append(running_loss)
@@ -439,11 +453,11 @@ class InductiveController:
                         print(f"{k} = {np.mean(v[-batch_cnt:])}")
             
             if epoch%5 == 0:
-                val_loss_epoch, val_dict = self.evaluate_model(test_seqs)
+                val_loss_epoch, val_dict = self.evaluate_model()
                 val_dict_list.append(val_dict)
                 val_loss.append(val_loss_epoch)
             
-            print(f"\r {int(start_index)} / {n_seqs}, epoch:{epoch} loss={running_loss}, val_loss: {val_loss_epoch}",end="")
+            print(f"\r Batch {int(batch_id)} / {batch_cnt}, epoch:{epoch}/ {self.num_epochs} loss={running_loss}, val_loss: {val_loss_epoch}",end="")
             
         
         ### Saving the model
@@ -462,40 +476,26 @@ class InductiveController:
         
         return (loss_dict)
     
-    def evaluate_model(self, test_seqs):
+    def evaluate_model(self):
         """calculates the test loss over the complete epoch"""
         self.model.eval()
-        self.model.init_hidden() 
+        self.model.init_hidden()
         epoch_wise_loss = []
         val_log_dicts = []
-        n_seqs = len(test_seqs['x_length'])  # number of walks
-        cluster_vector = []  # temp
-        clusters = []  # temp
-        cl_hat = []  # temp
-        for start_index in range(0, n_seqs-self.batch_size+1, self.batch_size):
-            print("\r%d/%d" %(int(start_index),n_seqs),end="")
-            batch_cnt = 0  # Batch number in Epoch
-            x_batch, y_batch = self.get_batch(start_index, self.batch_size, test_seqs)
-            clusters.append(y_batch['cluster_id'])  #temp
+        
+        batch_cnt = math.ceil(self.test_n_walks / self.batch_size)
+        
+        for batch_id in range(batch_cnt): 
+            seqs = self.sample_random_Walks(self.batch_size, self.test_edges)
+            seqs = self.get_X_Y_from_sequences(seqs)          
+            x_batch, y_batch = self.get_batch(seqs)
                 
             # forward + backward pas
             y_hat= self.model(**x_batch)
-            cl_hat.append(y_hat['cluster_id_hat'])  # temp
-            
-            # temp code
-            cluster_vector.append(y_hat['cluster_id_hat_vector'])
-            # -- end temp code
-            
             _, log_dict = self.model.train_los(**y_hat, **y_batch)
                 
-            batch_cnt += 1
             epoch_wise_loss.append(log_dict['loss'])
             val_log_dicts.append(log_dict)
-            
-        
-        pickle.dump(cluster_vector, open("temp/cluster_vector.pickle", 'wb'))  # temp    
-        pickle.dump(clusters, open("temp/clusters.pickle", 'wb'))  # temp  
-        pickle.dump(cl_hat, open("temp/cl_hat.pickle", 'wb'))  # temp  
         
         return (np.mean(epoch_wise_loss), self.mean_dict(val_log_dicts))
               
@@ -728,3 +728,52 @@ class InductiveController:
         x_batch['node_attr'] = torch.FloatTensor(x_batch['node_attr']).to(self.device)
 
         return x_batch
+    
+if __name__ == "__main__":
+    folder = "data/enron/"
+    orchestrator = Orchestrator(folder)
+    # orchestrator.init_graphsynthesizer('LSTM')
+
+    nodes = orchestrator._load_nodes()
+    embed = orchestrator._load_embed()
+    edges = orchestrator._load_edges() 
+    config_dict = orchestrator.config['lstm']
+    config_dict['num_epochs'] = 2
+    config_dict['verbose'] = 2
+    inductiveController = InductiveController(nodes=nodes, embed=embed, edges=edges, path="", config_dict=config_dict, device='cpu')
+    start = time.time()
+    loss_dict = inductiveController.fit()
+    print(f"time: {time.time()-start:.2f}")
+    inductiveController.create_synthetic_walks(orchestrator._load_synthetic_nodes(), 10)
+
+    # print("## MLP uni-directional variant  ##")
+    # adj_df = pd.DataFrame([(i, i+1, i/10, (i+1)/10) for i in range(9)],
+    #             columns=['start', 'end', 'edge_attr1', 'edge_attr2'])
+    # adj_df = pd.concat([adj_df]*500)
+    # node_df = pd.DataFrame([(i/10, (i+1)/10) for i in range(10)],
+    #             columns=['attr1','attr2'])
+    # embed_df = pd.DataFrame([(i/10, (i+1)/10) for i in range(10)],
+    #             columns=['emb1','emb2'])
+    # config_dict = yaml.safe_load('''
+    #     synth2_path: None
+    #     test_fraction: 0.3
+    #     batch_size: 128
+    #     num_clusters: 10
+    #     cluster_dim: 4
+    #     epochs: 1000
+    #     z_dim: 8
+    #     activation_function_str: 'relu'
+    #     lr: 0.005
+    #     weight_decay: 0.0001
+    #     verbose: 2
+    #     kl: true
+    #     kl_weight: 0.001
+    # ''')
+    # graphSynthesizer2 = MLPEdgeSynthsizer(node_df, embed_df, adj_df, "", config_dict)
+    # loss_dict, epoch_loss, val_loss = graphSynthesizer2.fit()
+    
+    # synth_nodes = embed_df.merge(node_df,left_index=True, right_index=True )
+    
+    # synth_edges = graphSynthesizer2.create_synthetic_walks(synth_nodes, 30)
+    # synth_edges
+# %%

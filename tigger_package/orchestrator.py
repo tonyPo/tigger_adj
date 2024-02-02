@@ -45,7 +45,7 @@ class Orchestrator():
         self.lstm_controller = None
         self.graphsynthesizer = None
         self.spark = None
-        self.device = config_dict.get("device", "/CPU:0")
+        self.device = config_dict.get("device", "cpu")
         
     
     def train_node_synthesizer(self):

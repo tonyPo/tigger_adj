@@ -135,4 +135,4 @@ synth_walks: "synth_walks.pickle"
 synth_nodes: "synth_nodes.parquet"
 synth_graph_dir: "synth_graph/"
 target_node_count: 150
-  
+device: 'cpu'
