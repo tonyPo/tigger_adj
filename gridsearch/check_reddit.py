@@ -17,13 +17,43 @@ import importlib
 import tigger_package.orchestrator
 importlib.reload(tigger_package.orchestrator)
 from tigger_package.orchestrator import Orchestrator
+from tigger_package.graphsage_unsup import TorchGeoGraphSageUnsup
 
 # COMMAND ----------
 
-folder = "/Workspace/Repos/antonius.b.a.poppe@nl.abnamro.com_old/tigger_adj/data/reddit/"
+# graphsage
+
+folder = "/Workspace/Repos/antonius.b.a.poppe@nl.abnamro.com_old/tigger_adj/data/10k_trxn/"
 orchestrator = Orchestrator(folder)
-orchestrator.init_graphsynthesizer('MLP', seed=1)
-orchestrator.train_graphsyntesizer()
+nodes = orchestrator._load_nodes()
+edges =  orchestrator._load_edges()
+
+# COMMAND ----------
+
+edges['start'] = edges['start'].astype('int64')
+edges['end'] = edges['end'].astype('int64')
+edges.describe()
+
+# COMMAND ----------
+
+orchestrator.graphsage = TorchGeoGraphSageUnsup(
+    config_dict = orchestrator.config['torch_geo_graphsage'],
+    config_path=orchestrator.config_path,
+    nodes=nodes, 
+    edges=edges,
+)
+
+# COMMAND ----------
+
+train_metrics = orchestrator.graphsage.fit()
+
+# COMMAND ----------
+
+folder = "/Workspace/Repos/antonius.b.a.poppe@nl.abnamro.com_old/tigger_adj/data/10k_trxn/"
+orchestrator = Orchestrator(folder)
+orchestrator.create_graphsage_embedding()
+# orchestrator.init_graphsynthesizer('MLP', seed=1)
+# orchestrator.train_graphsyntesizer()
 
 # COMMAND ----------
 

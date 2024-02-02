@@ -2,14 +2,14 @@ trial_info:
   dropout: {'trial_meth': suggest_float, "low": 0., "high": 0.2}
   num_layers: 2
   num_neighbors: {'trial_meth': suggest_int, "low": 5, "high": 25}
-  epoch: {'trial_meth': suggest_int, "low": 200, "high": 1000, "log": true}
+  epoch: {'trial_meth': suggest_int, "low": 800, "high": 1500, "log": true}
   # epoch: 4
   embedding_dim: 128
   lr: {'trial_meth': suggest_float, "low": 0.00001, "high": 0.005, "log": true}
   embed_path: 'embed/'
   verbose: 2
   num_test: 0.2
-  batch_size: 1024
+  batch_size: 2048
   
 n_trials: 20
-out_path: "/dbfs/mnt/dseedsi/users/ton/synth_graphs/gridsearch/reddit/graphsage_reddit"
+out_path: "/dbfs/mnt/dseedsi/users/ton/synth_graphs/gridsearch/10k_trxn/graphsage_reddit"

@@ -24,21 +24,12 @@ torch.__version__
 
 # COMMAND ----------
 
-folder = "/Workspace/Repos/antonius.b.a.poppe@nl.abnamro.com_old/tigger_adj/data/reddit/"
-# searcher = gridsearch_graphsage(folder)
+folder = "/Workspace/Repos/antonius.b.a.poppe@nl.abnamro.com_old/tigger_adj/data/10k_trxn/"
+searcher = gridsearch_graphsage(folder)
 # searcher = gridsearch_ddpm(folder)
 # searcher = gridsearch_lstm(folder)
-searcher = gridsearch_mlp(folder)
-#147 in 5:20 -> 2,1 min per epoch
+# searcher = gridsearch_mlp(folder)
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC - dropout 0.05
-# MAGIC - lr = 0.003
-# MAGIC - timestep 2500
-# MAGIC - step 50K (epochs?)
-# MAGIC - weigh decay = 0.0001
 
 # COMMAND ----------
 

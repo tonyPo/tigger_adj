@@ -47,4 +47,8 @@ searcher.study.best_params
 
 # COMMAND ----------
 
+[I 2024-01-29 16:16:28,493] Trial 0 finished with value: 4.5832727703827105 and parameters: {'num_clusters': 14, 'cluster_dim': 7, 'epochs': 284, 'lr': 2.9781698486625904e-05, 'weight_decay': 6.08649815139304e-05, 'kl_weight': 1.4129720612185052e-05}. Best is trial 0 with value: 4.5832727703827105.
 
+[I 2024-01-30 03:09:32,971] Trial 1 finished with value: 3.637095402434435 and parameters: {'num_clusters': 9, 'cluster_dim': 5, 'epochs': 434, 'lr': 3.1896785188299403e-05, 'weight_decay': 3.958304262036784e-05, 'kl_weight': 1.4335158342485605e-07}. Best is trial 1 with value: 3.637095402434435.
+
+[I 2024-01-30 09:27:24,318] Trial 2 finished with value: 4.176707463259203 and parameters: {'num_clusters': 15, 'cluster_dim': 10, 'epochs': 209, 'lr': 0.00028581541391794964, 'weight_decay': 2.5212124897264015e-05, 'kl_weight': 1.2792001652348734e-06}. Best is trial 1 with value: 3.637095402434435.

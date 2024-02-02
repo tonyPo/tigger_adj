@@ -42,7 +42,7 @@ class InductiveController:
         os.makedirs(self.model_dir, exist_ok=True)
                 
         self.gpu_num = -1
-        self.device = torch.device(device) #self.get_device()
+        self.device = device
         random.seed(self.seed)
 
         #prep data
@@ -335,8 +335,8 @@ class InductiveController:
                 
             # split in x and y
             if k == 'x_length':
-                x_batch[k] = torch_seq.to('cpu')
-                y_batch[k] = torch_seq.to('cpu')
+                x_batch[k] = torch_seq
+                y_batch[k] = torch_seq
             else:
                 x_batch[k] = torch_seq[:, :-1] 
                 y_batch[k] = torch_seq[:, 1:] 

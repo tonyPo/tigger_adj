@@ -1,13 +1,13 @@
 trial_info:
-  n_walks: {'trial_meth': suggest_int, "low": 1000, "high": 10000, "log": False}
+  n_walks: {'trial_meth': suggest_int, "low": 2000, "high": 10000, "log": False}
   test_n_walks: 100
-  batch_size: 64
+  batch_size: 2048
   num_clusters: {'trial_meth': suggest_int, "low": 4 , "high": 32, "log": False} 
   cluster_emb_dim: {'trial_meth': suggest_int, "low": 2 , "high": 16, "log": False}
-  mu_hidden_dim: 64
+  mu_hidden_dim: 128
   l_w: {'trial_meth': suggest_int, "low": 4 , "high": 32, "log": False}
-  # num_epochs: {'trial_meth': suggest_int, "low": 500 , "high": 1000, "log": False}
-  num_epochs: {'trial_meth': suggest_int, "low": 5 , "high": 5, "log": False}
+  num_epochs: {'trial_meth': suggest_int, "low": 3000 , "high": 1000, "log": False}
+  # num_epochs: {'trial_meth': suggest_int, "low": 5 , "high": 5, "log": False}
   minimum_walk_length: 2
   verbose: 1
   pca_components: {'trial_meth': suggest_int, "low": 4 , "high": 32, "log": False}
