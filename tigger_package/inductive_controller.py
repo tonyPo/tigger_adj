@@ -740,6 +740,7 @@ if __name__ == "__main__":
     config_dict = orchestrator.config['lstm']
     config_dict['num_epochs'] = 2
     config_dict['verbose'] = 2
+    config_dict['device'] = 'cpu'
     inductiveController = InductiveController(nodes=nodes, embed=embed, edges=edges, path="", config_dict=config_dict, device='cpu')
     start = time.time()
     loss_dict = inductiveController.fit()

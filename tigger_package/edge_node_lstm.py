@@ -41,7 +41,7 @@ class EdgeNodeLSTM(nn.Module):
             num_embeddings=self.num_components,
             embedding_dim=self.clust_dim,
             padding_idx=self.vocab['<PAD>']
-        )
+        ).to(device)
         
         # design LSTM
         self.lstm = nn.LSTM(
@@ -50,45 +50,45 @@ class EdgeNodeLSTM(nn.Module):
             num_layers=self.nb_lstm_layers,
             batch_first=True,
             dropout = self.dropout            
-        )  
+        ).to(device)
         
         # output layer which projects back to tag space
-        self.embedding_hidden = nn.Linear(self.gnn_dim,self.gnn_dim)  #re-embedding gnn embedding?
-        self.hidden_to_ne_hidden = nn.Linear(self.nb_lstm_units, 200)  # Z_cluster
-        self.clusterid_hidden = nn.Linear(200,self.num_components)  # Z_cluster to cluster distribution
-        self.cluster_mu = nn.Linear(200,self.mu_hidden_dim*self.num_components)  # mu's per cluster
-        self.cluster_var = nn.Linear(200,self.mu_hidden_dim*self.num_components) # var's per cluster
+        self.embedding_hidden = nn.Linear(self.gnn_dim,self.gnn_dim).to(device)  #re-embedding gnn embedding?
+        self.hidden_to_ne_hidden = nn.Linear(self.nb_lstm_units, 200).to(device)   # Z_cluster
+        self.clusterid_hidden = nn.Linear(200,self.num_components).to(device)  # Z_cluster to cluster distribution
+        self.cluster_mu = nn.Linear(200,self.mu_hidden_dim*self.num_components).to(device)  # mu's per cluster
+        self.cluster_var = nn.Linear(200,self.mu_hidden_dim*self.num_components).to(device) # var's per cluster
         
         gnn_dim2 = int((self.mu_hidden_dim - self.gnn_dim) / 2 + self.mu_hidden_dim)
-        self.gnn_dropout1 = nn.Dropout(dropout)
-        self.gnn_decoder1 = nn.Linear(self.mu_hidden_dim, gnn_dim2)  #layer 1 gnn_decoder
-        self.gnn_dropout2 = nn.Dropout(dropout)
-        self.gnn_decoder2 = nn.Linear(gnn_dim2, self.gnn_dim)  # layer 2 gnn_decoder
-        self.gnn_dropout3 = nn.Dropout(dropout)
-        self.gnn_decoder3 = nn.Linear(self.gnn_dim, self.gnn_dim)  # layer 3 gnn_decoder
+        self.gnn_dropout1 = nn.Dropout(dropout).to(device)
+        self.gnn_decoder1 = nn.Linear(self.mu_hidden_dim, gnn_dim2).to(device)  #layer 1 gnn_decoder
+        self.gnn_dropout2 = nn.Dropout(dropout).to(device)
+        self.gnn_decoder2 = nn.Linear(gnn_dim2, self.gnn_dim).to(device)  # layer 2 gnn_decoder
+        self.gnn_dropout3 = nn.Dropout(dropout).to(device)
+        self.gnn_decoder3 = nn.Linear(self.gnn_dim, self.gnn_dim).to(device)  # layer 3 gnn_decoder
         
         edge_dim2 = int((self.mu_hidden_dim - self.edge_attr_dim) / 2 + self.mu_hidden_dim)
-        self.edge_dropout1 = nn.Dropout(dropout)
-        self.edge_decoder1 = nn.Linear(self.mu_hidden_dim, edge_dim2)  #layer 1 gnn_decoder
-        self.edge_dropout2 = nn.Dropout(dropout)
-        self.edge_decoder2 = nn.Linear(edge_dim2, self.edge_attr_dim)  # layer 2 gnn_decoder
-        self.edge_dropout3 = nn.Dropout(dropout)
-        self.edge_decoder3 = nn.Linear(self.edge_attr_dim, self.edge_attr_dim)  # layer 3 gnn_decoder
+        self.edge_dropout1 = nn.Dropout(dropout).to(device)
+        self.edge_decoder1 = nn.Linear(self.mu_hidden_dim, edge_dim2).to(device)  #layer 1 gnn_decoder
+        self.edge_dropout2 = nn.Dropout(dropout).to(device)
+        self.edge_decoder2 = nn.Linear(edge_dim2, self.edge_attr_dim).to(device)  # layer 2 gnn_decoder
+        self.edge_dropout3 = nn.Dropout(dropout).to(device)
+        self.edge_decoder3 = nn.Linear(self.edge_attr_dim, self.edge_attr_dim).to(device)  # layer 3 gnn_decoder
         
         node_dim2 = int((self.mu_hidden_dim - self.node_attr_dim) / 2 + self.mu_hidden_dim)
-        self.feat_dropout1 = nn.Dropout(dropout)
-        self.feat_decoder1 = nn.Linear(self.mu_hidden_dim, node_dim2)  #layer 1 gnn_decoder
-        self.feat_dropout2 = nn.Dropout(dropout)
-        self.feat_decoder2 = nn.Linear(node_dim2, self.node_attr_dim)  # layer 2 gnn_decoder
-        self.feat_dropout3 = nn.Dropout(dropout)
-        self.feat_decoder3 = nn.Linear(self.node_attr_dim, self.node_attr_dim)  # layer 3 gnn_decoder
+        self.feat_dropout1 = nn.Dropout(dropout).to(device)
+        self.feat_decoder1 = nn.Linear(self.mu_hidden_dim, node_dim2).to(device)  #layer 1 gnn_decoder
+        self.feat_dropout2 = nn.Dropout(dropout).to(device)
+        self.feat_decoder2 = nn.Linear(node_dim2, self.node_attr_dim).to(device)  # layer 2 gnn_decoder
+        self.feat_dropout3 = nn.Dropout(dropout).to(device)
+        self.feat_decoder3 = nn.Linear(self.node_attr_dim, self.node_attr_dim).to(device)  # layer 3 gnn_decoder
                 
-        self.mse_los_gnn = nn.MSELoss(reduction='none')
-        self.mse_loss_edge = nn.MSELoss(reduction='none')
-        self.mse_loss_feat = nn.MSELoss(reduction='none')
-        self.celoss_cluster = nn.CrossEntropyLoss(ignore_index=0)
+        self.mse_los_gnn = nn.MSELoss(reduction='none').to(device)
+        self.mse_loss_edge = nn.MSELoss(reduction='none').to(device)
+        self.mse_loss_feat = nn.MSELoss(reduction='none').to(device)
+        self.celoss_cluster = nn.CrossEntropyLoss(ignore_index=0).to(device)
 
-        self.relu_cluster = nn.LeakyReLU()  # activation forhidden to determin cluster id
+        self.relu_cluster = nn.LeakyReLU().to(device)  # activation forhidden to determin cluster id
         
         self.device = device
         
