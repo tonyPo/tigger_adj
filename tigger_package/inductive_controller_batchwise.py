@@ -157,29 +157,20 @@ class InductiveController:
                   
         return vocab
         
-    def sample_random_Walks(self, train=True):
+    def sample_random_Walks(self, n_walks, edges):
         """Create n_walk number of random walks"""
-        if self.verbose >= 2:
-            print(f"Running Random Walk on {len(self.edges)} edges")
         random_walks = []
-        n_walks = self.n_walks if train else self.test_n_walks
-        for edge in tqdm(random.choices(self.edges, k=n_walks)):
+        for edge in random.choices(edges, k=n_walks):
             rw = self.run_random_walk(edge)
             if rw is not None:
                 random_walks.append(rw)
-
-        if self.verbose >= 2:
-            print(f"collected {len(random_walks)} random walks")
-            print("Average length of random walks")
-            lengths = []
-            for wk in random_walks:
-                lengths.append(len(wk))
-            print(f"Mean length {np.mean(lengths):.02f} and Std deviation {np.std(lengths):.02f}")
-            plt.hist(lengths)
-            # plt.xscale("log")
-            plt.title("histogram of random walk lengths")
-            plt.show()
-
+        
+        # in case some edge results in None:
+        while len(random_walks) < n_walks:
+            edge = random.choice(edges)
+            rw = self.run_random_walk(edge)
+            if rw is not None:
+                random_walks.append(rw)
         return random_walks
 
     def run_random_walk(self, edge):
@@ -324,26 +315,27 @@ class InductiveController:
            
         return res_dict
 
-    def get_batch(self, start_index, batch_size, seqs):
+    def get_batch(self, seqs):
         """Creates padded batch copied to the torch device
         seqs is a dict containing :
         seq_edge, seq_X, X_lengths, seq_CID"""
-
+        
         batch_seq = {}
         pad_batch_seq = {}
         pad_value = self.vocab['<PAD>']
         # copy relevant part of seq into batch dic and create padding matrices
         for k,seq in seqs.items():
             if k == 'x_length':
-                x_length = seqs['x_length'][start_index:start_index+batch_size]
+                x_length = seqs['x_length']
             else:
-                batch_seq[k] = seq[start_index:start_index+batch_size]
+                batch_seq[k] = seq
                 if type(seq[0][0])==list:
                     dim = len(seq[0][0])
-                    padding_shape = (batch_size, self.l_w+1, dim)
+                    padding_shape = (self.batch_size, self.l_w+1, dim)
                 else:
-                    padding_shape = (batch_size, self.l_w+1)
+                    padding_shape = (self.batch_size, self.l_w+1)
                 pad_batch_seq[k] = np.ones(padding_shape, dtype=np.float64) * pad_value
+               
         
         # join padding matrix with batch sequences
         for i, x_len in enumerate(x_length):
@@ -414,11 +406,6 @@ class InductiveController:
         epoch_wise_loss = []
         running_loss = 0 
         val_loss_epoch = 0
-        seqs = self.sample_random_Walks()
-        seqs = self.get_X_Y_from_sequences(seqs)
-
-        test_seqs = self.sample_random_Walks(train=False)
-        test_seqs = self.get_X_Y_from_sequences(test_seqs)
         
         loss_dict = {
                 'loss': [],
@@ -434,12 +421,12 @@ class InductiveController:
            
         for epoch in range(self.num_epochs):
             self.model.train()
-            seqs = self.data_shuffle(seqs)  # shuffle data
-            n_seqs = len(seqs['x_length'])  # number of walks
-
-            for start_index in range(0, n_seqs-self.batch_size+1, self.batch_size):              
-                batch_cnt = 0  # Batch number in Epoch
-                x_batch, y_batch = self.get_batch(start_index, self.batch_size, seqs)
+            batch_cnt = math.ceil(self.n_walks / self.batch_size)
+  
+            for batch_id in range(batch_cnt): 
+                seqs = self.sample_random_Walks(self.batch_size, self.train_edges)
+                seqs = self.get_X_Y_from_sequences(seqs)          
+                x_batch, y_batch = self.get_batch(seqs)
 
                 self.model.zero_grad()
                 
@@ -455,9 +442,8 @@ class InductiveController:
                 for k in loss_dict.keys():
                     loss_dict[k].append(log_dict[k])
     
-                batch_cnt += 1
-                print(f"\r {int(start_index)} / {n_seqs}, epoch:{epoch} loss={running_loss}, val_loss: {val_loss_epoch}",end="")
-                
+                print(f"\r Batch {int(batch_id)} / {batch_cnt}, epoch:{epoch}/ {self.num_epochs} loss={running_loss}, val_loss: {val_loss_epoch}",end="")
+     
             running_loss = np.mean(loss_dict['loss'][-batch_cnt:])
             epoch_wise_loss.append(running_loss)
             
@@ -467,11 +453,12 @@ class InductiveController:
                         print(f"{k} = {np.mean(v[-batch_cnt:])}")
             
             if epoch%5 == 0:
-                val_loss_epoch, val_dict = self.evaluate_model(test_seqs)
+                val_loss_epoch, val_dict = self.evaluate_model()
                 val_dict_list.append(val_dict)
                 val_loss.append(val_loss_epoch)
             
-            print(f"\r {int(start_index)} / {n_seqs}, epoch:{epoch} loss={running_loss}, val_loss: {val_loss_epoch}",end="")
+            print(f"\r Batch {int(batch_id)} / {batch_cnt}, epoch:{epoch}/ {self.num_epochs} loss={running_loss}, val_loss: {val_loss_epoch}",end="")
+            
         
         ### Saving the model
         state = {
@@ -489,19 +476,19 @@ class InductiveController:
         
         return (loss_dict)
     
-    def evaluate_model(self, test_seqs):
+    def evaluate_model(self):
         """calculates the test loss over the complete epoch"""
         self.model.eval()
         self.model.init_hidden()
         epoch_wise_loss = []
         val_log_dicts = []
-        n_seqs = len(test_seqs['x_length']) # number of walks
         
-
-        for start_index in range(0, n_seqs-self.batch_size+1, self.batch_size):
-            print("\r%d/%d" %(int(start_index),n_seqs),end="")
-            
-            x_batch, y_batch = self.get_batch(start_index, self.batch_size, test_seqs)
+        batch_cnt = math.ceil(self.test_n_walks / self.batch_size)
+        
+        for batch_id in range(batch_cnt): 
+            seqs = self.sample_random_Walks(self.batch_size, self.test_edges)
+            seqs = self.get_X_Y_from_sequences(seqs)          
+            x_batch, y_batch = self.get_batch(seqs)
                 
             # forward + backward pas
             y_hat= self.model(**x_batch)
@@ -753,7 +740,7 @@ if __name__ == "__main__":
     config_dict = orchestrator.config['lstm']
     config_dict['num_epochs'] = 2
     config_dict['verbose'] = 2
-    config_dict['device'] = 'mps'
+    config_dict['device'] = 'cpu'
     inductiveController = InductiveController(nodes=nodes, embed=embed, edges=edges, path="", config_dict=config_dict, device='cpu')
     start = time.time()
     loss_dict = inductiveController.fit()

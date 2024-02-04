@@ -153,9 +153,9 @@ class EdgeNodeLSTM(nn.Module):
         # Dim transformation: (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, nb_lstm_units)
 
         # pack_padded_sequence so that padded items in the sequence won't be shown to the LSTM
-        X = torch.nn.utils.rnn.pack_padded_sequence(X, x_length, batch_first=True,enforce_sorted=False)
+        # X = torch.nn.utils.rnn.pack_padded_sequence(X, x_length, batch_first=True,enforce_sorted=False)
         X, self.hidden = self.lstm(X, self.hidden)  # now run through LSTM
-        X, _ = torch.nn.utils.rnn.pad_packed_sequence(X, batch_first=True, total_length=seq_len)  # unpacking operation
+        # X, _ = torch.nn.utils.rnn.pad_packed_sequence(X, batch_first=True, total_length=seq_len)  # unpacking operation
         X = X.contiguous()
         
         # ---------------------
