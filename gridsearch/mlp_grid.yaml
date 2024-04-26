@@ -1,13 +1,13 @@
 trial_info:
   synth2_path: None
   test_fraction: 0.1
-  batch_size: 1024
-  num_clusters: {'trial_meth': suggest_int, "low": 4 , "high": 32, "log": False}
-  cluster_dim: {'trial_meth': suggest_int, "low": 2 , "high": 16, "log": False}
-  epochs: {'trial_meth': suggest_int, "low": 100 , "high": 700, "log": False}
+  batch_size: 2048
+  num_clusters: 10
+  cluster_dim: 5
+  epochs: {'trial_meth': suggest_int, "low": 400 , "high": 700, "log": False}
   # epochs: 5
   z_dim: {'trial_meth': suggest_int, "low": 16 , "high": 256, "log": False}
-  activation_function_str: {'trial_meth': suggest_categorical, "choices": ['relu', 'sigmoid'] }
+  activation_function_str: 'sigmoid'
   lr: {'trial_meth': suggest_float, "low": 0.00001, "high": 0.005, "log": true} 
   weight_decay: {'trial_meth': "suggest_float", "low": 0.000001, "high": 0.01, "log": true}
   verbose: 1
@@ -17,4 +17,4 @@ trial_info:
 
 
 n_trials: 10
-out_path: "/dbfs/mnt/dseedsi/users/ton/synth_graphs/gridsearch/reddit/mlp_reddit"
+out_path: "/dbfs/mnt/dseedsi/users/ton/synth_graphs/gridsearch/10k_trxn/mlp_10k_trxn"

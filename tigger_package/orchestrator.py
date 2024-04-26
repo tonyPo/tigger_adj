@@ -14,12 +14,13 @@ from sklearn.preprocessing import MinMaxScaler
 from tigger_package.graphsage_unsup import TorchGeoGraphSageUnsup
 from tigger_package.graph_generator import GraphGenerator
 # from tigger_package.flownet import FlowNet
-from tigger_package.inductive_controller import InductiveController
+
 
 import importlib
-import tigger_package.mlp_edge_synthesizer
-importlib.reload(tigger_package.mlp_edge_synthesizer)
+import tigger_package.inductive_controller
+importlib.reload(tigger_package.inductive_controller)
 from tigger_package.mlp_edge_synthesizer import MLPEdgeSynthsizer
+from tigger_package.inductive_controller import InductiveController
 
 import tigger_package.bimlp_edge_synthesizer
 importlib.reload(tigger_package.bimlp_edge_synthesizer)
@@ -208,7 +209,10 @@ class Orchestrator():
         return spark
     
     def _load_edges(self):
-        return pd.read_parquet(self.config_path + self.config['edges_path'])  
+        edges = pd.read_parquet(self.config_path + self.config['edges_path'])
+        cols = [c for c in edges.columns if c not in ['start', 'end']]
+        edges = edges[['start', 'end']+ cols]
+        return edges  
 
     def _load_nodes(self, incl_label_col=False):
         # assume id column

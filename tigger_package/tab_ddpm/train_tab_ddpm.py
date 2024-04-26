@@ -209,9 +209,12 @@ class Tab_ddpm_controller:
         synth_node = synth_node[self.dataset.cols]
 
         synth_nodes = pd.concat([synth_embed, synth_node], axis=1) 
+        synth_nodes = self.remove_temp_cols(synth_nodes)
+
+        synth_nodes = synth_nodes.reset_index(drop=True)
         synth_nodes = self.post_process(synth_nodes)
         synth_nodes = synth_nodes.iloc[:num_samples,:]
-        synth_nodes = self.remove_temp_cols(synth_nodes)
+        
         synth_nodes = synth_nodes.reset_index(drop=True)
         synth_nodes.columns = synth_nodes.columns.map(str)
         synth_nodes.to_parquet(name) 
@@ -236,7 +239,9 @@ class Tab_ddpm_controller:
         the remaining points that are outside the boundary [0,1] are adjust to fit them
         in the range [0,1]
         """
+        
         for c in synth_nodes.columns:
+            print(f"processing colum {c}")
             discard = synth_nodes[(synth_nodes[c]> 2) | (synth_nodes[c]< -1)]
             synth_nodes = synth_nodes.drop(discard.index)
             

@@ -27,19 +27,10 @@ torch.__version__
 folder = "/Workspace/Repos/antonius.b.a.poppe@nl.abnamro.com_old/tigger_adj/data/reddit/"
 # searcher = gridsearch_graphsage(folder)
 # searcher = gridsearch_ddpm(folder)
-# searcher = gridsearch_lstm(folder)
+searcher = gridsearch_lstm(folder)
 # searcher = gridsearch_mlp(folder)
-searcher = gridsearch_bimlp(folder)
+# searcher = gridsearch_bimlp(folder)
 #147 in 5:20 -> 2,1 min per epoch
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC - dropout 0.05
-# MAGIC - lr = 0.003
-# MAGIC - timestep 2500
-# MAGIC - step 50K (epochs?)
-# MAGIC - weigh decay = 0.0001
 
 # COMMAND ----------
 
@@ -47,8 +38,6 @@ searcher.study.best_params
 
 # COMMAND ----------
 
-[I 2024-01-29 16:16:28,493] Trial 0 finished with value: 4.5832727703827105 and parameters: {'num_clusters': 14, 'cluster_dim': 7, 'epochs': 284, 'lr': 2.9781698486625904e-05, 'weight_decay': 6.08649815139304e-05, 'kl_weight': 1.4129720612185052e-05}. Best is trial 0 with value: 4.5832727703827105.
-
-[I 2024-01-30 03:09:32,971] Trial 1 finished with value: 3.637095402434435 and parameters: {'num_clusters': 9, 'cluster_dim': 5, 'epochs': 434, 'lr': 3.1896785188299403e-05, 'weight_decay': 3.958304262036784e-05, 'kl_weight': 1.4335158342485605e-07}. Best is trial 1 with value: 3.637095402434435.
-
-[I 2024-01-30 09:27:24,318] Trial 2 finished with value: 4.176707463259203 and parameters: {'num_clusters': 15, 'cluster_dim': 10, 'epochs': 209, 'lr': 0.00028581541391794964, 'weight_decay': 2.5212124897264015e-05, 'kl_weight': 1.2792001652348734e-06}. Best is trial 1 with value: 3.637095402434435.
+ Trial 1 finished with value: 5.520856475830078 and parameters: {'n_walks': 5885, 'num_clusters': 14, 'cluster_emb_dim': 9, 'l_w': 10, 'num_epochs': 4518, 'pca_components': 32, 'lr': 1.3415876376134754e-05, 'kl_weight': 0.002422183362569752, 'dropout': 0.05037192315433581, 'weight_decay': 0.002670319405414444}. Best is trial 0 with value: 4.043224477767945.
+ [W 2024-02-04 13:04:35,993] Trial 2 failed with parameters: {'n_walks': 4988, 'num_clusters': 13, 'cluster_emb_dim': 9, 'l_w': 17, 'num_epochs': 2168, 'pca_components': 13, 'lr': 0.0006059381474972682, 'kl_weight': 0.013346618732457191, 'dropout': 0.013603934620045178, 'weight_decay': 2.689769045113198e-05} because of the following error: RuntimeError('Parent directory temp/lstm_model/models/ does not exist.').
+Traceback (most recent call last):

@@ -53,6 +53,7 @@ class InductiveController:
                 
         self.gpu_num = -1
         self.device = device
+        print(f"device used: {device}")
         random.seed(self.seed)
 
         #prep data
@@ -63,11 +64,13 @@ class InductiveController:
         self.node_features = self.create_feature_matrix_from_pandas(nodes)
         
         self.node_embedding_matrix = self.create_node_embedding_matrix_from_dict(embed)
+        if self.verbose >= 1: print("calculating cluster labels")
         self.cluster_labels, self.kmeans, self.pca = self.reduce_embedding_dim_and_cluster()
+        if self.verbose >= 1: print("calculating probabilities")
         self.define_sample_with_prob_per_edge()
         self.train_edges, self.test_edges = self.train_test_split()
         
-        if self.verbose >=2:
+        if self.verbose >=1:
             print(f"Size of nodes: {sys.getsizeof(nodes)/(1024*1024)} MB")
             print(f"Size of edges: {sys.getsizeof(edges)/(1024*1024)} MB")
             print(f"Size of embed: {sys.getsizeof(embed)/(1024*1024)} MB")
@@ -75,7 +78,7 @@ class InductiveController:
             print(f"Size of node_id_to_object: {sys.getsizeof(self.node_id_to_object)/(1024*1024)} MB")
             print(f"Size of vocab: {sys.getsizeof(self.vocab)/(1024*1024)} MB")
             print(f"Size of node_features: {sys.getsizeof(self.node_features)/(1024*1024)} MB")
-            print(f"Size of node_embedding_matrix: {sys.getsizeof(self.node_embedding_matrix)/(1024*1024)} MB")
+            # print(f"Size of node_embedding_matrix: {sys.getsizeof(self.node_embedding_matrix)/(1024*1024)} MB")
         
         #prep model
         self.model, self.optimizer = self.initialize_model()
@@ -94,6 +97,7 @@ class InductiveController:
         assert len(self.vocab) - 2 == len(self.node_id_to_object), \
             "not all nodes are in the vocab"
         #TODO asset len(self.node_id_to_object)== shape[0] node features
+        
         
         
     def create_node_and_edge_objects_with_links_lists(self):
@@ -363,8 +367,8 @@ class InductiveController:
                 
             # split in x and y
             if k == 'x_length':
-                x_batch[k] = torch_seq
-                y_batch[k] = torch_seq
+                x_batch[k] = torch_seq.to('cpu')
+                y_batch[k] = torch_seq.to('cpu')
             else:
                 x_batch[k] = torch_seq[:, :-1] 
                 y_batch[k] = torch_seq[:, 1:] 
