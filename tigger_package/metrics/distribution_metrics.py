@@ -303,12 +303,12 @@ class EdgeDistributionMetrics:
             text_file.write(adj_str)
         return input_file
         
-def compare_metrics(nodes, edges, synth_nodes, synth_edges, name):
+def compare_metrics(nodes, edges, synth_nodes, synth_edges, name, temp_dir='temp/', gtrie_dir='~/Downloads/gtrieScanner_src_01/'):
     ndm = NodeDistributionMetrics(nodes, synth_nodes)
     node_metric_df = ndm.calculate_wasserstein_distance()
     
     # edge atributes
-    edm = EdgeDistributionMetrics(edges, synth_edges)
+    edm = EdgeDistributionMetrics(edges, synth_edges, temp_dir=temp_dir, gtrie_dir=gtrie_dir)
     edge_metrec_df = edm.calculate_wasserstein_distance()
     
     degree_metric_df = edm.get_degree_wasserstein_distance()

@@ -6,15 +6,15 @@ trial_info:
   gaussian_loss_type: "mse"
   scheduler: "cosine"
   model_type: "mlp"
-  device: "cpu"
-  batch_size: 1024
+  device: "cuda"
+  batch_size: 2048
   lr: {'trial_meth': "suggest_float", "low": 0.0001, "high": 0.01, "log": true}
   weight_decay: {'trial_meth': "suggest_float", "low": 0.000001, "high": 0.001, "log": true}
-  steps: {'trial_meth': "suggest_int", "low": 1000, "high": 400000, "log": true}
+  steps: {'trial_meth': "suggest_int", "low": 80000, "high": 200000, "log": true}
   dataset_params:
     val_fraction: 0.1
-    cat_cols: []
-    boolean_cols: []
+    cat_cols: [['is_foreign', 'is_nl', 'is_high_geo_risk', 'is_increased_geo_risk']]
+    boolean_cols: ['isOrganisation','isExtEntity']
   model_params:
     rtdl_params:
       d_layers: [
@@ -24,4 +24,4 @@ trial_info:
       dropout: {'trial_meth': "suggest_float", "low": 0., "high": 0.3}
   
 n_trials: 10
-out_path: "/dbfs/mnt/dseedsi/users/ton/synth_graphs/gridsearch/reddit/ddpm_reddit"
+out_path: "/dbfs/mnt/dseedsi/users/ton/synth_graphs/gridsearch/10k_trxn/ddpm_10K"

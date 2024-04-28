@@ -1,17 +1,17 @@
 trial_info:
-  n_walks: {'trial_meth': suggest_int, "low": 2000, "high": 10000, "log": False}
-  test_n_walks: 100
+  n_walks: 8193
+  test_n_walks: 2049
   batch_size: 2048
-  num_clusters: {'trial_meth': suggest_int, "low": 4 , "high": 32, "log": False} 
-  cluster_emb_dim: {'trial_meth': suggest_int, "low": 2 , "high": 16, "log": False}
+  num_clusters: 10
+  cluster_emb_dim: 5
   mu_hidden_dim: 128
   l_w: {'trial_meth': suggest_int, "low": 4 , "high": 32, "log": False}
-  num_epochs: {'trial_meth': suggest_int, "low": 3000 , "high": 1000, "log": False}
-  # num_epochs: {'trial_meth': suggest_int, "low": 5 , "high": 5, "log": False}
+  num_epochs: {'trial_meth': suggest_int, "low": 1000 , "high": 2500, "log": False}
+  # num_epochs: 4
   minimum_walk_length: 2
   verbose: 1
   pca_components: {'trial_meth': suggest_int, "low": 4 , "high": 32, "log": False}
-  config_path: "lstm_model/"
+  config_path: ""
   lr: {'trial_meth': suggest_float, "low": 0.00001, "high": 0.005, "log": true} 
   kl_weight: {'trial_meth': suggest_float, "low": 0.00001, "high": 0.05, "log": true}
   dropout: {'trial_meth': suggest_float, "low": 0., "high": 0.1} 
@@ -19,5 +19,5 @@ trial_info:
   weight_decay: {'trial_meth': "suggest_float", "low": 0.000001, "high": 0.01, "log": true}
   seed: 1
 
-n_trials: 1
+n_trials: 10
 out_path: "/dbfs/mnt/dseedsi/users/ton/synth_graphs/gridsearch/reddit/lstm_reddit"

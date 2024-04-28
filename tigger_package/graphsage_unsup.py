@@ -37,7 +37,8 @@ class TorchGeoGraphSageUnsup():
         self.model_path = self.config_path + 'model/'
         os.makedirs(self.model_path, exist_ok=True)
     
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cpu')
         self.init_model(nodes, edges)
         
     def init_model(self, nodes, edges):    
@@ -79,7 +80,7 @@ class TorchGeoGraphSageUnsup():
         data = tg.data.Data(x = torch.FloatTensor(nodes.values), 
             edge_index=torch.transpose(edge_index, 0, 1))
         
-        data = data.to(self.device, 'x', 'edge_index')
+        # data = data.to(self.device, 'x', 'edge_index')
         return data
     
     def dataset_epoch(self, loader):
