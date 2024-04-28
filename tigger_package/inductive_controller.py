@@ -466,7 +466,7 @@ class InductiveController:
                 for k,v in loss_dict.items():
                         print(f"{k} = {np.mean(v[-batch_cnt:])}")
             
-            if epoch%5 == 0:
+            if epoch%1 == 0:
                 val_loss_epoch, val_dict = self.evaluate_model(test_seqs)
                 val_dict_list.append(val_dict)
                 val_loss.append(val_loss_epoch)
