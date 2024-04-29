@@ -1,0 +1,140 @@
+# REDDIT CONFIG FILE
+
+flownet:
+  overwrite: True
+  flownet_config_path: 'flowmodel/'
+
+  # model structure
+  activation: 'sigmoid'
+  hidden_units: [32,32]
+  number_of_bijectors: 12
+  # training params
+  epoch: 3000
+  learning_rate: 0.001
+  batch_size: 36 
+
+  # print freq of loss during training
+  n_disp: 20
+  verbose: 2
+  # only needed when loading pretrain model
+  event_dim: 37
+  
+torch_geo_graphsage:
+  embed_path: 'embed/'
+  embedding_dim: 64
+  epoch: 800
+  lr: 0.0001
+  batch_size: 1024
+  num_layers: 2
+  verbose: 2
+  num_neighbors: [7, 7]
+  dropout: 0.05
+  num_test: 0.2
+
+lstm:
+  n_walks: 3000 #8000
+  test_n_walks: 100
+  batch_size: 2048
+  num_clusters: 10
+  cluster_emb_dim: 5
+  mu_hidden_dim: 64
+  l_w: 27
+  num_epochs: 3 #750
+  minimum_walk_length: 2
+  verbose: 1
+  pca_components: 8
+  config_path: "lstm_model/"
+  lr: 0.00002
+  kl_weight: 0.0001
+  dropout: 0.23
+  nb_lstm_layers: 2
+  weight_decay: 0.00001
+  seed: 1
+
+MLPEdgeSynthesizer:
+  synth2_path: None
+  test_fraction: 0.1
+  batch_size: 2048
+  num_clusters: 10
+  cluster_dim: 5
+  epochs: 600
+  z_dim: 128
+  activation_function_str: 'sigmoid'
+  lr: 0.003
+  weight_decay: 0.001
+  kl: True
+  kl_weight: 0.0001
+  verbose: 2
+  seed: 1
+
+BIMLPEdgeSynthesizer:
+  synth2_path: None
+  test_fraction: 0.1
+  batch_size: 2048
+  num_clusters: 10
+  cluster_dim: 5
+  epochs: 375
+  z_dim: 128
+  activation_function_str: 'sigmoid'
+  lr: 0.0003
+  weight_decay: 0.001
+  kl_weight: 0.0001
+  verbose: 1
+  seed: 1
+  kl: True
+
+tab_ddpm:
+  ddpm_config_path: ""
+  verbose: 1
+  num_timesteps: 2500
+  gaussian_loss_type: "mse"
+  scheduler: "cosine"
+  model_type: "mlp"
+  device: "cuda"
+  batch_size: 2048
+  lr: 0.003
+  weight_decay: 0.0001
+  steps: 125000
+  dataset_params:
+    val_fraction: 0.1
+    cat_cols: []
+    boolean_cols: []
+  model_params:
+    rtdl_params:
+      d_layers: [
+          256,
+          256
+      ]
+      dropout: 0.05
+
+transfer:
+  weight_col: 'weight'
+  support_size: [10, 10]
+  dims: [2, 24,24,24]
+  batch_size: 30
+  hub0_dim: 24
+  seed: 1
+  learning_rate: 0.0002
+  usebn: true
+  verbose: 2
+  epochs: 10
+
+edge_cat_transformer:
+  bin_cols: []
+  cat_cols: []
+
+
+node_synthesizer_class: "tab_ddpm"
+label_col: 'label'
+  
+base_path: "/dbfs/mnt/dseedsi/users/ton/reddit/"
+nodes_path: "nodes2.parquet"
+edges_path: "edges.parquet"
+embed_path: "embed/embedding.parquet"
+synth_walks: "synth_walks.pickle"
+synth_nodes: "synth_nodes.parquet"
+synth_graph_dir: "synth_graph/"
+target_node_count: 10000
+device: "cuda"
+# device: "cpu"
+  

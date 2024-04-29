@@ -1,0 +1,139 @@
+# 10K transaction network CONFIG FILE
+
+flownet:
+  overwrite: True
+  flownet_config_path: 'flowmodel/'
+
+  # model structure
+  activation: 'sigmoid'
+  hidden_units: [32,32]
+  number_of_bijectors: 12
+  # training params
+  epoch: 3000
+  learning_rate: 0.001
+  batch_size: 36 
+
+  # print freq of loss during training
+  n_disp: 20
+  verbose: 2
+  # only needed when loading pretrain model
+  event_dim: 37
+  
+torch_geo_graphsage:
+  embed_path: 'embed/'
+  embedding_dim: 64
+  epoch: 1300
+  lr: 0.005
+  batch_size: 2048
+  num_layers: 2
+  verbose: 1
+  num_neighbors: [25, 25]
+  dropout: 0.15
+  num_test: 0.2
+
+lstm:
+  n_walks: 8193
+  test_n_walks: 2049
+  batch_size: 2048
+  num_clusters: 10
+  cluster_emb_dim: 5
+  mu_hidden_dim: 128
+  l_w: 21
+  num_epochs: 1600
+  minimum_walk_length: 2
+  verbose: 1
+  pca_components: 16
+  config_path: "lstm_model/"
+  lr: 0.0002
+  kl_weight: 0.0001
+  dropout: 0.05
+  nb_lstm_layers: 2
+  weight_decay: 0.00005
+  seed: 1
+
+MLPEdgeSynthesizer:
+  synth2_path: None
+  test_fraction: 0.1
+  batch_size: 2048
+  num_clusters: 10
+  cluster_dim: 5
+  epochs: 600
+  z_dim: 128
+  activation_function_str: 'sigmoid'
+  lr: 0.001
+  weight_decay: 0.0003
+  kl: False
+  kl_weight: 0.000001
+  verbose: 1
+  seed: 1
+
+BIMLPEdgeSynthesizer:
+  synth2_path: None
+  test_fraction: 0.1
+  batch_size: 1024
+  num_clusters: 3
+  cluster_dim: 3
+  epochs: 3 #375
+  z_dim: 128
+  activation_function_str: 'sigmoid'
+  lr: 0.003
+  weight_decay: 0.001
+  kl_weight: 0.0001
+  verbose: 1
+  seed: 1
+  kl: True
+
+tab_ddpm:
+  ddpm_config_path: ""
+  verbose: 2
+  num_timesteps: 2500
+  gaussian_loss_type: "mse"
+  scheduler: "cosine"
+  model_type: "mlp"
+  device: "cuda"
+  batch_size: 1024
+  lr: 0.003
+  weight_decay: 0.0001
+  steps: 100000
+  dataset_params:
+    val_fraction: 0.1
+    cat_cols: [['is_nl', 'is_foreign', 'is_high_geo_risk', 'is_increased_geo_risk']]
+    boolean_cols: ['isExtEntity', 'isOrganisation']
+  model_params:
+    rtdl_params:
+      d_layers: [
+          256,
+          256
+      ]
+      dropout: 0.05
+
+transfer:
+  weight_col: 'weight'
+  support_size: [10, 10]
+  dims: [2, 24,24,24]
+  batch_size: 30
+  hub0_dim: 24
+  seed: 1
+  learning_rate: 0.0002
+  usebn: true
+  verbose: 2
+  epochs: 10
+
+edge_cat_transformer:
+  bin_cols: []
+  cat_cols: []
+
+node_synthesizer_class: "tab_ddpm"
+label_col: 'label'
+  
+base_path: "/dbfs/mnt/dseedsi/users/ton/synth_graphs/graphs/10K_graph/"
+nodes_path: "10k_nodes.parquet"
+edges_path: "10k_edges.parquet"
+embed_path: "embed/embedding.parquet"
+synth_walks: "synth_walks.pickle"
+synth_nodes: "synth_nodes.parquet"
+synth_graph_dir: "synth_graph/"
+target_node_count: 10000
+# device: "cuda"
+device: "cuda"
+  
