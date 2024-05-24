@@ -125,11 +125,13 @@ class Tab_ddpm_controller:
         self.embed = embed
  
     def fit(self):
+        # print(f"cat cols at start fit {self.dataset_params['cat_cols']}")
         self.dataset = Dataset.make_dataset(
             nodes = self.nodes,
             embed = self.embed,
             dataset_config = self.dataset_params
         )
+        # print(f"cat cols at end dataset {self.dataset_params['cat_cols']}")
 
         # determine number of category dimensions
         num_cat = self.dataset.X_cat['train'].shape[1] if self.dataset.X_cat is not None else 0
@@ -147,6 +149,7 @@ class Tab_ddpm_controller:
 
         train_loader = prepare_fast_dataloader(self.dataset, split='train', batch_size=self.batch_size)
         validation_loader = prepare_fast_dataloader(self.dataset, split='val', batch_size=self.batch_size)
+        # print(f"cat cols at end loader {self.dataset_params['cat_cols']}")
 
         # create diffusion model with both forward as backward 
         self.diffusion = GaussianMultinomialDiffusion(
@@ -160,6 +163,7 @@ class Tab_ddpm_controller:
         )
         self.diffusion.to(self.device)
         self.diffusion.train()
+        # print(f"cat cols at end GMD instatiation {self.dataset_params['cat_cols']}")
         
 
         trainer = Trainer(
@@ -171,7 +175,9 @@ class Tab_ddpm_controller:
             device=self.device,
             valiation_iter=validation_loader
         )
+        # print(f"cat cols before trainerloop {self.dataset_params['cat_cols']}")
         trainer.run_loop()
+        # print(f"cat cols at end trianer loop {self.dataset_params['cat_cols']}")
         
         if self.verbose >= 2:
             self.plot_history(trainer.loss_history)
@@ -184,25 +190,32 @@ class Tab_ddpm_controller:
 
     def sample_model(self, num_samples, name=None):
         """ samples new nodes"""
+        print("start sampling nodes")
+        # print(f"cat cols at start sampling variable {self.dataset_params['cat_cols']}")
         empirical_class_dist = torch.tensor([1])  # only 1 class
         synth_node_cat, synth_node_num, synth_embed = None, None, None
         
         x_gen, y_gen = self.diffusion.sample_all(num_samples*2, self.batch_size, empirical_class_dist.float(), ddim=False)
         X_gen, y_gen = x_gen.numpy(), y_gen.numpy()
+        print(f"X_gen has shape {X_gen.shape}")
 
         num_numerical_features = self.dataset.X_num['train'].shape[1] if self.dataset.X_num is not None else 0
+        print(f"num_numerical_features: {num_numerical_features} defined. \r")
 
         X_num_ = X_gen
         if num_numerical_features < X_gen.shape[1]:
             # use goodode funciton to map to one hot
             X_cat = X_num_[:, num_numerical_features:]
             cat_cols = sum(self.dataset_params['cat_cols'], [])
+            print(f"cat_cols: {cat_cols} \r")
+            print(f"temp cols: {self.temp_cols} \r")
             synth_node_cat = pd.DataFrame(X_cat, columns =  cat_cols)
 
         if num_numerical_features != 0:
             X_num = X_num_[:, :num_numerical_features]
             synth_embed = pd.DataFrame(X_num[:,:self.dataset.embed_dim])
             synth_node_num = pd.DataFrame(X_num[:,self.dataset.embed_dim:], columns=self.dataset.num_cols)
+            print(f"self.dataset.num_cols: {self.dataset.num_cols}")
 
         synth_node = pd.concat([d for d in [synth_node_cat, synth_node_num] if d is not None], axis=1) 
         #reset to original order
@@ -239,7 +252,7 @@ class Tab_ddpm_controller:
         the remaining points that are outside the boundary [0,1] are adjust to fit them
         in the range [0,1]
         """
-        
+        print(f"post processing columns: {synth_nodes.columns}")
         for c in synth_nodes.columns:
             # print(f"processing colum {c}")
             discard = synth_nodes[(synth_nodes[c]> 2) | (synth_nodes[c]< -1)]
@@ -259,11 +272,14 @@ class Tab_ddpm_controller:
         hist[['loss', 'val_loss']].plot(logy=True)
         
     def expand_boolean_cols(self, nodes):
+        print(f"expending boolean columns to nodes current cols {nodes.columns} \r")
         for col in self.dataset_params.get('boolean_cols',[]):
             add_col_name = col + "_1"
             self.temp_cols.add(add_col_name)  # add cols to temp list
             self.dataset_params['cat_cols'].append([col, add_col_name])
             nodes[add_col_name] = nodes[col].astype(int) ^ 1
+        print(f"after expending cols {nodes.columns} \r")
+        print(f"dataset_params_cat_cols {self.dataset_params['cat_cols']} \r")
         return nodes
     
     def remove_temp_cols(self, nodes):

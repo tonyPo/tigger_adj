@@ -500,6 +500,7 @@ class InductiveController:
         epoch_wise_loss = []
         val_log_dicts = []
         n_seqs = len(test_seqs['x_length']) # number of walks
+        # print(f"n_segs line 503 {n_seqs} \r")
         
 
         for start_index in range(0, n_seqs-self.batch_size+1, self.batch_size):
@@ -513,6 +514,7 @@ class InductiveController:
                 
             epoch_wise_loss.append(log_dict['loss'])
             val_log_dicts.append(log_dict)
+            # print(f"\\r val_log_dicts: {val_log_dicts} \r")
         
         return (np.mean(epoch_wise_loss), self.mean_dict(val_log_dicts))
               

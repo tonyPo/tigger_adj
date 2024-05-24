@@ -26,22 +26,22 @@ torch_geo_graphsage:
   lr: 0.0001
   batch_size: 1024
   num_layers: 2
-  verbose: 2
+  verbose: 0
   num_neighbors: [7, 7]
   dropout: 0.05
   num_test: 0.2
 
 lstm:
-  n_walks: 3000 #8000
-  test_n_walks: 100
+  n_walks: 8000
+  test_n_walks: 2049
   batch_size: 2048
   num_clusters: 10
   cluster_emb_dim: 5
   mu_hidden_dim: 64
   l_w: 27
-  num_epochs: 3 #750
+  num_epochs: 750
   minimum_walk_length: 2
-  verbose: 1
+  verbose: 0
   pca_components: 8
   config_path: "lstm_model/"
   lr: 0.00002
@@ -64,7 +64,7 @@ MLPEdgeSynthesizer:
   weight_decay: 0.001
   kl: True
   kl_weight: 0.0001
-  verbose: 2
+  verbose: 0
   seed: 1
 
 BIMLPEdgeSynthesizer:
@@ -79,13 +79,13 @@ BIMLPEdgeSynthesizer:
   lr: 0.0003
   weight_decay: 0.001
   kl_weight: 0.0001
-  verbose: 1
+  verbose: 0
   seed: 1
   kl: True
 
 tab_ddpm:
   ddpm_config_path: ""
-  verbose: 1
+  verbose: 0
   num_timesteps: 2500
   gaussian_loss_type: "mse"
   scheduler: "cosine"
@@ -134,7 +134,7 @@ embed_path: "embed/embedding.parquet"
 synth_walks: "synth_walks.pickle"
 synth_nodes: "synth_nodes.parquet"
 synth_graph_dir: "synth_graph/"
-target_node_count: 10000
+target_node_count: 30744
 device: "cuda"
 # device: "cpu"
   
