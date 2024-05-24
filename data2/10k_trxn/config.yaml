@@ -21,12 +21,12 @@ flownet:
   
 torch_geo_graphsage:
   embed_path: 'embed/'
-  embedding_dim: 64
+  embedding_dim: 32 # 64
   epoch: 1300
   lr: 0.005
   batch_size: 2048
   num_layers: 2
-  verbose: 1
+  verbose: 0
   num_neighbors: [25, 25]
   dropout: 0.15
   num_test: 0.2
@@ -41,7 +41,7 @@ lstm:
   l_w: 21
   num_epochs: 1600
   minimum_walk_length: 2
-  verbose: 1
+  verbose: 0
   pca_components: 16
   config_path: "lstm_model/"
   lr: 0.0002
@@ -64,7 +64,7 @@ MLPEdgeSynthesizer:
   weight_decay: 0.0003
   kl: False
   kl_weight: 0.000001
-  verbose: 1
+  verbose: 0
   seed: 1
 
 BIMLPEdgeSynthesizer:
@@ -79,13 +79,13 @@ BIMLPEdgeSynthesizer:
   lr: 0.003
   weight_decay: 0.001
   kl_weight: 0.0001
-  verbose: 1
+  verbose: 0
   seed: 1
   kl: True
 
 tab_ddpm:
   ddpm_config_path: ""
-  verbose: 2
+  verbose: 0
   num_timesteps: 2500
   gaussian_loss_type: "mse"
   scheduler: "cosine"
@@ -94,7 +94,7 @@ tab_ddpm:
   batch_size: 1024
   lr: 0.003
   weight_decay: 0.0001
-  steps: 100000
+  steps: 100000  # 100000
   dataset_params:
     val_fraction: 0.1
     cat_cols: [['is_nl', 'is_foreign', 'is_high_geo_risk', 'is_increased_geo_risk']]

@@ -37,8 +37,8 @@ class TorchGeoGraphSageUnsup():
         self.model_path = self.config_path + 'model/'
         os.makedirs(self.model_path, exist_ok=True)
     
-        # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.device = torch.device('cpu')
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # self.device = torch.device('cpu')
         self.init_model(nodes, edges)
         
     def init_model(self, nodes, edges):    
@@ -55,6 +55,7 @@ class TorchGeoGraphSageUnsup():
                             shuffle=True,
                             neg_sampling_ratio=1.0,
                             num_neighbors=self.num_neighbors,
+                            # edge_label_index=train_data.edge_index,
                         )
     
         self.test_loader = LinkNeighborLoader(
@@ -149,7 +150,7 @@ class TorchGeoGraphSageUnsup():
     def get_embedding(self, nodes, edges):
         data = self.init_dataset(nodes, edges)
         # might need to add a loader for big dataset
-        embed = self.model(data.x, data.edge_index)
+        embed = self.model.to('cpu')(data.x, data.edge_index)
         df = pd.DataFrame(embed.cpu().numpy())
         df = df.reset_index(names='id')
         df.columns = df.columns.map(str)

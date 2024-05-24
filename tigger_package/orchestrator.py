@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 import yaml
 import tensorflow as tf
+import copy
+
 if __name__ == "__main__":
     import os
     os.chdir('..')
@@ -50,17 +52,21 @@ class Orchestrator():
         
     
     def train_node_synthesizer(self):
+        print("Train node synthesizer")
         node = self._load_nodes()
         embed = self._load_normalized_embed()
+        config_dict=self.config[self.config['node_synthesizer_class']]
         self.node_synthesizer = self.node_synthesizer_class(
             embed = embed,
             nodes = node,
             config_path=self.config_path,
-            config_dict=self.config[self.config['node_synthesizer_class']])
+            config_dict = copy.deepcopy(config_dict)
+        )
         hist = self.node_synthesizer.fit()
         return hist
     
     def sample_node_synthesizer(self, model_name=None):
+        print("Sample node synthesizer")
         name = self.config_path + self.config['synth_nodes']
         if model_name:
             self.node_synthesizer = self.node_synthesizer_class(
@@ -81,6 +87,7 @@ class Orchestrator():
         return res
     
     def create_graphsage_embedding(self):
+        print("create GraphSage embedding")
         nodes = self._load_nodes()
         edges =  self._load_edges()
         self.graphsage = TorchGeoGraphSageUnsup(
