@@ -241,7 +241,7 @@ class Tab_ddpm_controller:
         """
         
         for c in synth_nodes.columns:
-            print(f"processing colum {c}")
+            # print(f"processing colum {c}")
             discard = synth_nodes[(synth_nodes[c]> 2) | (synth_nodes[c]< -1)]
             synth_nodes = synth_nodes.drop(discard.index)
             

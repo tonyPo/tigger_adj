@@ -95,21 +95,27 @@ G2= create_graph(1000)
 # %% Check nodes values and save node values
 G = G2
 node_attr = pd.DataFrame([{'id':n, **v} for n,v in G.nodes(data=True)])
-node_attr.to_parquet("erdos_nodes2.parquet")
+# node_attr.to_parquet("erdos_nodes2.parquet")
+#%%
 
+node_attr = pd.read_parquet("erdos_nodes2.parquet")
 def plot_attributes(df):
     fig = plt.figure(figsize=(20,20))
     dim = df.shape[1]
     for i, col in enumerate(df.columns):
         ax = fig.add_subplot(math.ceil(dim/2),2, i+1)
-        ax.hist(df[col], bins=20, alpha=0.5, color='g', label='node'+str(i))
+        ax.hist(df[col], bins=20, alpha=0.5, color='g', label=col)
+        ax.legend()
 
     plt.legend()
     plt.show()
 plot_attributes(node_attr)
 
 # %% check edge values
-edge_attr = pd.DataFrame([{'start':s, 'end': t, **v} for s,t,v in G.edges(data=True)])
-edge_attr.to_parquet("erdos_edges2.parquet")
+
+# edge_attr = pd.DataFrame([{'start':s, 'end': t, **v} for s,t,v in G.edges(data=True)])
+# edge_attr.to_parquet("erdos_edges2.parquet")
+edge_attr = pd.read_parquet("erdos_edges2.parquet")
+print(f"edges: {edge_attr.shape}")
 plot_attributes(edge_attr)
 # %%

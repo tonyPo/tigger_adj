@@ -303,7 +303,10 @@ class EdgeDistributionMetrics:
             text_file.write(adj_str)
         return input_file
         
-def compare_metrics(nodes, edges, synth_nodes, synth_edges, name, temp_dir='temp/', gtrie_dir='~/Downloads/gtrieScanner_src_01/'):
+def compare_metrics2(nodes, edges, synth_nodes, synth_edges, name, temp_dir='temp/', gtrie_dir='~/Downloads/gtrieScanner_src_01/'):
+    """ calculates the stats for the model referred to by the name parameters.
+    The results are in a normalize dataframe
+    """
     ndm = NodeDistributionMetrics(nodes, synth_nodes)
     node_metric_df = ndm.calculate_wasserstein_distance()
     
@@ -322,8 +325,95 @@ def compare_metrics(nodes, edges, synth_nodes, synth_edges, name, temp_dir='temp
     results.loc["orig_node_count",:] = {'value': nodes.shape[0], 'type': 'edge_cnt', 'metric': 'count'}
     
     results = results.reset_index(names='name')
-    results = results.rename(columns={"value": name})
-    
-    
+    results['model'] = name
+        
     return results
 
+def compare_metrics(nodes, edges, synth_nodes, synth_edges, name, temp_dir='temp/', gtrie_dir='~/Downloads/gtrieScanner_src_01/'):
+    """ metric used for LSTM, MLP and BI MLP variant. Reformat the name of the value column to the model name
+    """
+    results = compare_metrics2(nodes, edges, synth_nodes, synth_edges, name, temp_dir, gtrie_dir)
+    results = results.rename(columns={"value": name})
+    results = results.drop(columns='model')    
+    return results
+
+def calculate_stats(res):
+    """ Calculates the stats on metric type level for the  LSTM, MLP and BI-mlp model
+    The stats are the mean values over all runs and metrics per type.
+    return the summary stats with the values for the 3 models in columns.
+    """
+    node_attributes = res[res['type']=='node_attributes'].groupby('run_id').agg({'LSTM': 'mean', 'MLP': 'mean', 'Bi-MLP': 'mean', 'type': 'max'}).reset_index()
+    edge_attributes = res[res['type']=='edge_attributes'].groupby('run_id').agg({'LSTM': 'mean', 'MLP': 'mean', 'Bi-MLP': 'mean', 'type': 'max'}).reset_index()
+    dif_cluster_coef = res[res['name']=='dif_cluster_coef'][['name', 'LSTM', 'MLP', 'Bi-MLP', 'run_id'] ].rename(columns={'name': 'type'})
+    delta_widget = res[res['name']=='mean_delta_widget'][['name', 'LSTM', 'MLP', 'Bi-MLP', 'run_id'] ].rename(columns={'name': 'type'})
+    edge_cnt = (res[(res['type']=='edge_cnt') & (res['name']=='edge_count')].set_index('run_id')[['LSTM', 'MLP', 'Bi-MLP']] -  
+                res[(res['type']=='edge_cnt') & (res['name']=='orig_edge_count')].set_index('run_id')[['LSTM', 'MLP', 'Bi-MLP']]
+    )
+    edge_cnt['type'] = "Delta_edge_count"
+    edge_cnt = edge_cnt.reset_index(names='run_id')
+    cluster_coef = res[res['name'].str.startswith('dif_')][['name', 'LSTM', 'MLP', 'Bi-MLP', 'run_id'] ].rename(columns={'name': 'type'})
+    sum_res = pd.concat([node_attributes, edge_attributes, dif_cluster_coef, delta_widget, edge_cnt, cluster_coef], axis=0)
+    sum_stat = sum_res.groupby('type').mean()
+    return sum_stat 
+
+def calculate_model_performance(res):
+    """ Calculates the mean per metric over all runs.
+    The res dataframe should by the normalized version.
+    """
+    # node attribute metrics
+    node_attributes = (
+        res[res['type']=='node_attributes']  # select all metrics related to the node attributes.
+        .groupby(['model', 'name', 'type'])  # group by model, metric type and metric name
+        .agg(value=('value', 'mean'), std=('value', 'std'))  # group by model, metric type and metric name
+        .reset_index() 
+    )
+    
+    # edge attribute metric
+    edge_attributes = (
+        res[res['type']=='edge_attributes']  # select all metrics related to the edge attributes.
+        .groupby(['model', 'name', 'type']) # group by model, metric type and metric name
+        .agg(value=('value', 'mean'), std=('value', 'std')) 
+        .reset_index()
+    )
+    
+    # difference in clustering coef.
+    dif_cluster_coef = (
+        res[res['name']=='dif_cluster_coef']  # select all metrics related to the clustering coefficient
+        .groupby(['model', 'name', 'type'])  # group by model, metric type and metric name
+        .agg(value=('value', 'mean'), std=('value', 'std'))
+        .reset_index()
+    )
+    dif_cluster_coef['type'] = 'dif_cluster_coef'  # set the different in clust coef as separate type to avoid being averages with the cluster coef
+    
+    # calculate the average fraction difference in widget count.
+    delta_widget = (
+        res[res['name']=='mean_delta_widget']
+        .groupby(['model', 'name', 'type'])
+        .agg(value=('value', 'mean'), std=('value', 'std'))
+        .reset_index()
+    )
+    delta_widget['type'] = 'mean_delta_widget'
+
+    # calculate the fraction difference in edge count
+    synth_cnt = res[(res['type']=='edge_cnt') & (res['name']=='edge_count')].groupby(['model', 'run_id']).agg({'value': 'mean'})['value']
+    orig_cnt = res[(res['type']=='edge_cnt') & (res['name']=='orig_edge_count')].groupby(['model', 'run_id']).agg({'value': 'mean'})['value']
+
+    edge_cnt = pd.DataFrame((synth_cnt-orig_cnt) / orig_cnt)
+    edge_cnt = (edge_cnt.groupby('model').agg(value=('value', 'mean'), std=('value', 'std')))
+    
+    edge_cnt['type'] = "Delta_edge_fraction"
+    edge_cnt['name'] = "Delta_edge_fraction"
+    edge_cnt = edge_cnt.reset_index()
+    
+    # calculate the synth cluster coef.
+    cluster_coef = (
+        res[(res['metric']=='cluster_coefficient') & (res['name']=='synth_edges')]
+        .groupby(['model', 'name','type'])
+        .agg(value=('value', 'mean'), std=('value', 'std'))
+        .reset_index()
+    )
+    sum_res = pd.concat([node_attributes, edge_attributes, dif_cluster_coef, edge_cnt, delta_widget, cluster_coef], axis=0)
+    return sum_res
+
+def model_smry_performance(mdl_performance):
+    return pd.pivot_table(mdl_performance, values=['value', 'std'], index='type', columns='model', sort=False)
